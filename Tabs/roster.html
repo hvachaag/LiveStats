@@ -1,0 +1,29 @@
+<section class="tab-view">
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Event Roster</div>
+        <div class="card-subtitle">Loaded from Google Sheets CSV</div>
+      </div>
+    </div>
+    <div id="roster-table"></div>
+  </div>
+
+  <script>
+  async function lvsInitRoster(){
+    const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQEPtdntSso-1gltfBl2drK-E9osbPWo1A3L3sc5q7Uy4QnSMFgUpRBVnLcoGEVVYjZvxByozTuJTGx/pub?gid=1211391611&single=true&output=csv";
+    const res = await fetch(url);
+    const text = await res.text();
+
+    const rows = text.split('\n').map(r => r.split(','));
+    const headers = rows.shift();
+
+    let html = `<table style="width:100%;border-collapse:collapse">
+      <thead><tr>${headers.map(h=>`<th style="text-align:left;border-bottom:1px solid #333;padding:6px">${h}</th>`).join('')}</tr></thead>
+      <tbody>${rows.map(r=>`<tr>${r.map(c=>`<td style="padding:6px;border-bottom:1px solid #222">${c}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table>`;
+
+    document.getElementById('roster-table').innerHTML = html;
+  }
+  </script>
+</section>

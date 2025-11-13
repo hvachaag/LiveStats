@@ -1,0 +1,1245 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LiveStats Engine - Event Console</title>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --bg: #020617;
+      --bg-soft: #030712;
+      --card: #020617;
+      --muted: #9ca3af;
+      --border: #1f2937;
+
+      --primary: #4b0082;
+      --primary-soft: #3b0764;
+      --primary-bright: #a855f7;
+      --primary-shadow: rgba(76,29,149,0.6);
+    }
+
+    body.theme-purple {
+      --primary: #4b0082;
+      --primary-soft: #3b0764;
+      --primary-bright: #a855f7;
+      --primary-shadow: rgba(76,29,149,0.6);
+    }
+    body.theme-blue {
+      --primary: #2563eb;
+      --primary-soft: #1d4ed8;
+      --primary-bright: #60a5fa;
+      --primary-shadow: rgba(37,99,235,0.6);
+    }
+    body.theme-neutral {
+      --primary: #4b5563;
+      --primary-soft: #374151;
+      --primary-bright: #9ca3af;
+      --primary-shadow: rgba(75,85,99,0.6);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, var(--primary-soft), var(--bg));
+      color: #f9fafb;
+    }
+    .app-shell {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 12px 12px 32px;
+      min-height: 100vh;
+    }
+    header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-bright));
+      border-radius: 18px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 18px 45px var(--primary-shadow);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand img {
+      height: 28px;
+      width: auto;
+      display: block;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+    header p {
+      margin: 2px 0 0;
+      font-size: 0.8rem;
+      opacity: 0.9;
+    }
+    .event-meta {
+      text-align: right;
+      font-size: 0.8rem;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(248,250,252,0.2);
+      background: rgba(15,23,42,0.3);
+      font-size: 0.72rem;
+      margin-bottom: 3px;
+    }
+    .sync-meta {
+      font-size: 0.72rem;
+      margin-bottom: 2px;
+      opacity: 0.85;
+    }
+
+    nav {
+      margin-top: 14px;
+      display: inline-flex;
+      gap: 4px;
+      padding: 4px;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.95);
+      box-shadow: 0 12px 32px rgba(15,23,42,0.7);
+    }
+    nav button {
+      border: none;
+      background: transparent;
+      color: rgba(249,250,251,0.8);
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    nav button.active {
+      background: radial-gradient(circle at top left, var(--primary-soft), var(--primary-bright));
+      color: #f9fafb;
+      box-shadow: 0 10px 28px var(--primary-shadow);
+    }
+
+    main { margin-top: 18px; }
+    section[data-tab] { display: none; }
+    section[data-tab].active { display: block; }
+
+    .card {
+      background: radial-gradient(circle at top left, #111827, #020617);
+      border-radius: 16px;
+      padding: 14px 14px 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 18px 40px rgba(15,23,42,0.9);
+      margin-bottom: 14px;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .card-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .card-subtitle {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .lineup-grid,
+    .results-grid,
+    .live-grid {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+      gap: 12px;
+    }
+    .live-grid {
+      grid-template-columns: minmax(0,1.6fr) minmax(0,1.2fr);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+    th, td {
+      padding: 5px 6px;
+      border-top: 1px solid rgba(31,41,55,0.9);
+      text-align: left;
+      white-space: nowrap;
+    }
+    thead th {
+      border-top: none;
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+    
+    tbody tr.dq {
+      color: #f97373;
+    }
+
+    /* Allow wrapping inside Live Event leaderboard so text stays inside the card */
+    .live-grid table th,
+    .live-grid table td {
+      white-space: normal;
+    }
+
+    .lineup-select {
+      width: 100%;
+      padding: 4px 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(55,65,81,0.9);
+      background: rgba(15,23,42,0.9);
+      color: #e5e7eb;
+      font-size: 0.8rem;
+    }
+
+    .tag-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin: 10px 0 4px;
+    }
+
+    .class-pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .class-pill {
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(55,65,81,0.9);
+      background: rgba(15,23,42,0.95);
+      font-size: 0.72rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .class-pill span.dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(148,163,184,0.9);
+    }
+    .class-pill.completed {
+      background: #16a34a;
+      border-color: #16a34a;
+      color: #ecfdf5;
+    }
+    .class-pill.completed span.dot { background: #bbf7d0; }
+    .class-pill.active {
+      background: linear-gradient(135deg, var(--primary), var(--primary-bright));
+      border-color: rgba(219,234,254,0.9);
+    }
+
+    .status-row {
+      display: grid;
+      grid-template-columns: repeat(3,minmax(0,1fr));
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 0.76rem;
+    }
+    .status-chip {
+      border-radius: 10px;
+      border: 1px solid rgba(55,65,81,0.9);
+      padding: 6px 8px;
+      background: rgba(15,23,42,0.95);
+    }
+    .status-main {
+      font-weight: 600;
+      font-size: 0.86rem;
+    }
+    .status-sub {
+      color: var(--muted);
+      font-size: 0.74rem;
+    }
+
+    .lineup-rail {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+    .chip-card {
+      min-width: 150px;
+      border-radius: 12px;
+      border: 1px solid rgba(55,65,81,0.9);
+      background: rgba(15,23,42,0.96);
+      padding: 6px 8px;
+      font-size: 0.76rem;
+    }
+    .chip-card .truck { font-weight: 600; }
+    .chip-card .meta { color: var(--muted); font-size: 0.7rem; }
+    .chip-card.pulled { opacity: 0.55; border-style: dashed; }
+    .chip-card.current { border-color: var(--primary-bright); }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: minmax(0,1.5fr) repeat(2,minmax(0,1fr));
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 0.78rem;
+    }
+    .field { display: flex; flex-direction: column; gap: 3px; }
+    .field label { color: var(--muted); font-size: 0.74rem; }
+    .field input {
+      padding: 6px 8px;
+      border-radius: 9px;
+      border: 1px solid rgba(55,65,81,0.9);
+      background: rgba(15,23,42,0.96);
+      color: #e5e7eb;
+      font-size: 0.82rem;
+    }
+    .field input[readonly] { border-style: dashed; color: var(--muted); }
+
+    .flags-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+      font-size: 0.76rem;
+    }
+    .flag-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(55,65,81,0.9);
+      background: rgba(15,23,42,0.96);
+    }
+
+    .primary-btn {
+      margin-top: 12px;
+      width: 100%;
+      border-radius: 10px;
+      border: none;
+      padding: 8px 10px;
+      font-size: 0.86rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #022c22;
+      cursor: pointer;
+      box-shadow: 0 12px 30px rgba(22,163,74,0.7);
+    }
+
+    .timer-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .timer-chip {
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px dashed rgba(148,163,184,0.7);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .talk-list {
+      margin: 6px 0 0;
+      padding-left: 18px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .talk-list strong { color: #e5e7eb; }
+
+    .export-links {
+      margin-top: 6px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .export-links a {
+      color: var(--primary-bright);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .export-links span { margin: 0 5px; }
+
+    .settings-toggle {
+      width: 100%;
+      border-radius: 12px;
+      padding: 8px 11px;
+      background: linear-gradient(135deg, var(--primary-soft), var(--primary-bright));
+      border: 1px solid rgba(248,250,252,0.16);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      font-size: 0.8rem;
+      color: #f9fafb;
+      box-shadow: 0 10px 26px var(--primary-shadow);
+    }
+    .settings-toggle small {
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: rgba(249,250,251,0.85);
+      font-size: 0.7rem;
+    }
+    .settings-panel { margin-top: 8px; }
+    .settings-panel.collapsed { display: none; }
+
+    .theme-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .theme-chip {
+      padding: 5px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(55,65,81,0.9);
+      font-size: 0.78rem;
+      cursor: pointer;
+      background: rgba(15,23,42,0.96);
+      color: #e5e7eb;
+      transition: box-shadow 0.15s ease, transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+    }
+    .theme-chip:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(15,23,42,0.9);
+    }
+
+    /* Per-theme preview styling */
+    .theme-chip[data-theme="theme-purple"] {
+      background: linear-gradient(135deg, #3b0764, #a855f7);
+      border-color: rgba(216,180,254,0.9);
+      color: #fdf4ff;
+    }
+    .theme-chip[data-theme="theme-blue"] {
+      background: linear-gradient(135deg, #1d4ed8, #60a5fa);
+      border-color: rgba(191,219,254,0.95);
+      color: #eff6ff;
+    }
+    .theme-chip[data-theme="theme-neutral"] {
+      background: linear-gradient(135deg, #111827, #4b5563);
+      border-color: rgba(148,163,184,0.9);
+      color: #e5e7eb;
+    }
+
+    .theme-chip.active {
+      box-shadow: 0 0 0 1px #f9fafb, 0 10px 24px var(--primary-shadow);
+    }
+
+    @media (max-width: 900px) {
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+      .event-meta { text-align: left; }
+      .lineup-grid,
+      .results-grid,
+      .live-grid {
+        grid-template-columns: minmax(0,1fr);
+      }
+    }
+  </style>
+  <script>
+    (function () {
+      const SPA_ROSTER_CSV_URL = 'https://thesouthernpullers.com/wp-content/uploads/2025/11/SPA-LiveStats-Engine-–-Sandbox-_-Dev-Roster.csv';
+
+      // Local sample roster so the UI still works if CSV fetch fails (CORS, offline, etc.)
+      const SAMPLE_ROSTER = [
+        { Class: '6200 2WD Local', 'Membership #': '6201', Vehicle: 'Southern Thunder', 'Make / Model': 'Chevy C10', Driver: 'Jake Miller' },
+        { Class: '6200 2WD Local', 'Membership #': '6202', Vehicle: 'Dirt Road Diva', 'Make / Model': 'Ford F-150', Driver: 'Sarah Collins' },
+        { Class: '2WD Prostock', 'Membership #': '7201', Vehicle: 'Haymaker', 'Make / Model': 'Chevy S-10', Driver: 'Cole Altman' },
+        { Class: '2WD Prostock', 'Membership #': '7202', Vehicle: 'Bumper Crop', 'Make / Model': 'Ford F-250', Driver: 'Cody Williams' },
+        { Class: '2WD Prostock', 'Membership #': '7203', Vehicle: 'Saturday Night Special', 'Make / Model': 'Dodge Ram', Driver: 'Justin Bennett' }
+      ];
+
+      let rosterRows = [];
+      let eventLineup = [];
+
+      function escapeHTML(str) {
+        return String(str || '').replace(/[&<>"']/g, c => {
+          switch (c) {
+            case '&': return '&amp;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '"': return '&quot;';
+            case "'": return '&#39;';
+            default: return c;
+          }
+        });
+      }
+
+      function parseRosterCSV(text) {
+        const lines = text.split(/\r?\n/);
+        if (!lines.length) return [];
+        const headerLine = lines[0].trim();
+        if (!headerLine) return [];
+        const headers = headerLine.split(',').map(h => h.trim());
+        const rows = [];
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+          const cells = line.split(',');
+          const row = {};
+          headers.forEach((h, idx) => {
+            row[h] = (cells[idx] || '').trim();
+          });
+          rows.push(row);
+        }
+        return rows;
+      }
+
+      function renderRosterIntoGrid(grid, rows, opts) {
+        opts = opts || {};
+        if (!rows || !rows.length) {
+          grid.innerHTML = '<div class="card"><div class="card-subtitle">Roster is empty.</div></div>';
+          return;
+        }
+
+        const byClass = {};
+        rows.forEach(r => {
+          const cls = r['Class'] || r['Cass'] || r['CLASS'];
+          if (!cls) return;
+          if (!byClass[cls]) byClass[cls] = [];
+          byClass[cls].push(r);
+        });
+
+        let classNames = Object.keys(byClass);
+        if (opts.filterText) {
+          const ft = String(opts.filterText).toLowerCase();
+          classNames = classNames.filter(name => name.toLowerCase().includes(ft));
+        }
+
+        if (!classNames.length) {
+          grid.innerHTML = '<div class="card"><div class="card-subtitle">No classes match this filter.</div></div>';
+          return;
+        }
+
+        classNames.sort();
+        if (opts.sort === 'desc') {
+          classNames.reverse();
+        }
+
+        if (opts.limit && opts.limit !== 'all' && typeof opts.limit === 'number') {
+          classNames = classNames.slice(0, opts.limit);
+        }
+
+        grid.innerHTML = '';
+
+        classNames.forEach(cls => {
+          const entries = byClass[cls];
+          const card = document.createElement('div');
+          card.className = 'card';
+
+          let html = '';
+          html += '<div class="card-header"><div>';
+          html += '<div class="card-title">' + escapeHTML(cls) + '</div>';
+          html += '<div class="card-subtitle">SPA roster · ' + entries.length + ' entries</div>';
+          html += '</div></div>';
+          html += '<table><thead><tr>';
+          html += '<th>Membership #</th><th>Vehicle</th><th>Make / Model</th><th>Driver</th>';
+          html += '</tr></thead><tbody>';
+
+          entries.forEach(e => {
+            const mem = e['Membership #'] || e['Membership'] || e['Member #'] || e['Member'] || '';
+            const vehicle = e['Vehicle'] || e['Truck'] || e['Truck Name'] || e['Vehicle Name'] || '';
+            const makeModel = e['Make / Model'] || e['Make/Model'] || e['Make'] || '';
+            const driver = e['Driver'] || e['Driver Name'] || '';
+
+            html += '<tr>';
+            html += '<td>' + escapeHTML(mem) + '</td>';
+            html += '<td>' + escapeHTML(vehicle) + '</td>';
+            html += '<td>' + escapeHTML(makeModel) + '</td>';
+            html += '<td>' + escapeHTML(driver) + '</td>';
+            html += '</tr>';
+          });
+
+          html += '</tbody></table>';
+          card.innerHTML = html;
+          grid.appendChild(card);
+        });
+      }
+
+      function buildRosterSuggestions() {
+        const datalist = document.getElementById('lineup-roster-options');
+        if (!datalist) return;
+        datalist.innerHTML = '';
+        if (!rosterRows || !rosterRows.length) return;
+
+        rosterRows.forEach((row, idx) => {
+          const cls = row['Class'] || row['Cass'] || row['CLASS'] || '';
+          const vehicle = row['Vehicle'] || row['Truck'] || row['Truck Name'] || row['Vehicle Name'] || '';
+          const driver = row['Driver'] || row['Driver Name'] || '';
+          if (!vehicle && !driver) return;
+          const label = (vehicle || '(no vehicle)') + ' · ' + (driver || 'Unknown') + (cls ? ' (' + cls + ')' : '');
+          const opt = document.createElement('option');
+          opt.value = label;
+          opt.dataset.rowIndex = String(idx);
+          datalist.appendChild(opt);
+        });
+      }
+
+      function renderEventLineup() {
+        const container = document.getElementById('lineup-grid');
+        if (!container) return;
+
+        if (!eventLineup || !eventLineup.length) {
+          container.innerHTML = '<div class="card"><div class="card-header"><div>' +
+            '<div class="card-title">Event lineup</div>' +
+            '<div class="card-subtitle">No entries added yet. Use the form above to build tonight\'s draws.</div>' +
+            '</div></div></div>';
+          return;
+        }
+
+        const byClass = {};
+        eventLineup.forEach(e => {
+          const cls = e.Class || 'Unassigned class';
+          if (!byClass[cls]) byClass[cls] = [];
+          byClass[cls].push(e);
+        });
+
+        const classNames = Object.keys(byClass).sort();
+        container.innerHTML = '';
+
+        classNames.forEach(cls => {
+          const entries = byClass[cls].slice().sort((a, b) => {
+            const da = parseFloat(a.draw || '0') || 0;
+            const db = parseFloat(b.draw || '0') || 0;
+            return da - db;
+          });
+
+          const card = document.createElement('div');
+          card.className = 'card';
+          let html = '';
+          html += '<div class="card-header"><div>';
+          html += '<div class="card-title">' + escapeHTML(cls) + '</div>';
+          html += '<div class="card-subtitle">Event lineup · ' + entries.length + ' draws</div>';
+          html += '</div></div>';
+          html += '<table><thead><tr>';
+          html += '<th>Draw #</th><th>Truck</th><th>Driver</th><th>SPA</th>';
+          html += '</tr></thead><tbody>';
+
+          entries.forEach(e => {
+            const spaText = e.spaMember ? 'Yes' : 'No';
+            html += '<tr>';
+            html += '<td>' + escapeHTML(String(e.draw || '')) + '</td>';
+            html += '<td>' + escapeHTML(e.Truck || '') + '</td>';
+            html += '<td>' + escapeHTML(e.Driver || '') + '</td>';
+            html += '<td>' + spaText + '</td>';
+            html += '</tr>';
+          });
+
+          html += '</tbody></table>';
+          card.innerHTML = html;
+          container.appendChild(card);
+        });
+      }
+
+      function loadRosterFromCSV() {
+        const grid = document.getElementById('roster-grid');
+
+        fetch(SPA_ROSTER_CSV_URL)
+          .then(resp => resp.text())
+          .then(text => {
+            const rows = parseRosterCSV(text);
+            if (!rows.length) {
+              rosterRows = SAMPLE_ROSTER.slice();
+            } else {
+              rosterRows = rows;
+            }
+            if (grid) {
+              renderRosterIntoGrid(grid, rosterRows);
+            }
+            buildRosterSuggestions();
+          })
+          .catch(err => {
+            console.warn('Error loading SPA roster CSV, using sample roster instead:', err);
+            rosterRows = SAMPLE_ROSTER.slice();
+            if (grid) {
+              renderRosterIntoGrid(grid, rosterRows);
+            }
+            buildRosterSuggestions();
+          });
+      }
+
+      const SAMPLE_EVENT_LINEUP = [
+        { 'SPA Member': 'TRUE', 'Line #': '15', Class: '2wd Modified', Driver: 'Trevor Beasley', Truck: 'Kuntry Boyz Toy', Distance: '308.37', Speed: '26.2', DQ: 'FALSE', Place: '4', Points: '7' },
+        { 'SPA Member': 'TRUE', 'Line #': '5', Class: '2wd Modified', Driver: 'Johnny Brown', Truck: 'Hog Wild', Distance: '311.33', Speed: '27.5', DQ: 'FALSE', Place: '3', Points: '8' },
+        { 'SPA Member': 'TRUE', 'Line #': '56', Class: '2wd Modified', Driver: 'Johnny Brown', Truck: 'Wild Hog', Distance: '317.64', Speed: '27.2', DQ: 'FALSE', Place: '2', Points: '9' },
+        { 'SPA Member': 'FALSE', 'Line #': '57', Class: '2wd Modified', Driver: 'Clayton Blocker', Truck: 'Wild Thang', Distance: '289.14', Speed: '23.3', DQ: 'FALSE', Place: '7', Points: '' },
+        { 'SPA Member': 'TRUE', 'Line #': '72', Class: '2wd Modified', Driver: 'Heith Wynn', Truck: 'Bearly Legal', Distance: '318.06', Speed: '27.6', DQ: 'FALSE', Place: '1', Points: '10' },
+        { 'SPA Member': 'TRUE', 'Line #': '29', Class: '2wd Modified', Driver: 'Tanner W. Ogden', Truck: 'Borrowed Parts', Distance: '296.44', Speed: '22.9', DQ: 'FALSE', Place: '5', Points: '6' },
+        { 'SPA Member': 'FALSE', 'Line #': '41', Class: '2wd Modified', Driver: 'Jaxson Edwards', Truck: 'To Be Determined', Distance: '290.09', Speed: '23.4', DQ: 'FALSE', Place: '6', Points: '' },
+
+        { 'SPA Member': 'TRUE', 'Line #': '10', Class: '4wd Prostock', Driver: 'Carson Blocker', Truck: 'Mean Green', Distance: '309.29', Speed: '27.8', DQ: 'FALSE', Place: '2', Points: '10' },
+        { 'SPA Member': 'FALSE', 'Line #': '20', Class: '4wd Prostock', Driver: 'Al Durrence', Truck: 'Mr. Sparkle', Distance: '324.51', Speed: '29.9', DQ: 'FALSE', Place: '1', Points: '' },
+
+        { 'SPA Member': 'TRUE', 'Line #': '26', Class: '2wd Supermodified', Driver: 'Justin Bennett', Truck: 'Lawless', Distance: '330.59', Speed: '33.6', DQ: 'FALSE', Place: '1', Points: '10' },
+        { 'SPA Member': 'TRUE', 'Line #': '30', Class: '2wd Supermodified', Driver: 'Carter Stewart', Truck: 'Saturday Night Special', Distance: '327.10', Speed: '31.3', DQ: 'FALSE', Place: '2', Points: '9' },
+        { 'SPA Member': 'TRUE', 'Line #': '25', Class: '2wd Supermodified', Driver: 'Cole Altman', Truck: 'Bumper Crop', Distance: '316.02', Speed: '32.0', DQ: 'FALSE', Place: '3', Points: '8' },
+        { 'SPA Member': 'TRUE', 'Line #': '60', Class: '2wd Supermodified', Driver: 'Cole Altman', Truck: 'High Yielder', Distance: '310.84', Speed: '30.1', DQ: 'FALSE', Place: '4', Points: '7' },
+        { 'SPA Member': 'FALSE', 'Line #': '21', Class: '2wd Supermodified', Driver: 'Daniel Johnson', Truck: 'TBD', Distance: '253.40', Speed: '32.6', DQ: 'TRUE', Place: '5', Points: '' },
+
+        { 'SPA Member': 'TRUE', 'Line #': '67', Class: '2wd Prostreet', Driver: 'Brent Daniels', Truck: 'Game Changer', Distance: '315.24', Speed: '23.0', DQ: 'FALSE', Place: '1', Points: '10' },
+        { 'SPA Member': 'TRUE', 'Line #': '54', Class: '2wd Prostreet', Driver: 'Patrick Martin', Truck: "Never Satisfied", Distance: '311.53', Speed: '21.9', DQ: 'FALSE', Place: '3', Points: '8' },
+        { 'SPA Member': 'TRUE', 'Line #': '52', Class: '2wd Prostreet', Driver: 'Griffin Campbell', Truck: 'FreeBird', Distance: '291.93', Speed: '18.5', DQ: 'FALSE', Place: '6', Points: '5' },
+        { 'SPA Member': 'TRUE', 'Line #': '2', Class: '2wd Prostreet', Driver: 'Brad Daniels', Truck: 'Radioactive', Distance: '310.11', Speed: '22.5', DQ: 'FALSE', Place: '4', Points: '7' },
+        { 'SPA Member': 'TRUE', 'Line #': '16', Class: '2wd Prostreet', Driver: 'Durham Hammett', Truck: 'Carolina Reaper', Distance: '309.42', Speed: '21.9', DQ: 'FALSE', Place: '5', Points: '6' },
+        { 'SPA Member': 'TRUE', 'Line #': '28', Class: '2wd Prostreet', Driver: 'Jed Chambus', Truck: 'Bearly Legal Jr.', Distance: '313.05', Speed: '21.8', DQ: 'FALSE', Place: '2', Points: '9' },
+        { 'SPA Member': 'TRUE', 'Line #': '50', Class: '2wd Prostreet', Driver: 'Wilkes Edwards', Truck: 'Uncle Jessie', Distance: '285.68', Speed: '16.2', DQ: 'FALSE', Place: '7', Points: '4' },
+        { 'SPA Member': 'TRUE', 'Line #': '51', Class: '2wd Prostreet', Driver: 'Wesley Mattox', Truck: "Bennett's Tractor Service", Distance: '126.34', Speed: '13.9', DQ: 'FALSE', Place: '8', Points: '3' },
+
+        { 'SPA Member': 'FALSE', 'Line #': '45', Class: '4wd Modified', Driver: 'Michael Hepler', Truck: 'Third Shift', Distance: '301.47', Speed: '28.6', DQ: 'FALSE', Place: '4', Points: '' },
+        { 'SPA Member': 'TRUE', 'Line #': '8', Class: '4wd Modified', Driver: 'Daniel Johnson', Truck: 'Desperado', Distance: '308.77', Speed: '30.0', DQ: 'FALSE', Place: '2', Points: '9' },
+        { 'SPA Member': 'TRUE', 'Line #': '54', Class: '4wd Modified', Driver: 'Brian Britt', Truck: 'Animal House', Distance: '313.15', Speed: '29.4', DQ: '', Place: '1', Points: '10' },
+        { 'SPA Member': 'TRUE', 'Line #': '40', Class: '4wd Modified', Driver: 'Freddy Stallings', Truck: 'Just Lookin', Distance: '302.64', Speed: '28.3', DQ: 'FALSE', Place: '3', Points: '8' }
+      ];
+
+      function buildLineupFromEvent() {
+        const container = document.getElementById('lineup-grid');
+        if (!container) return;
+
+        if (!SAMPLE_EVENT_LINEUP.length) {
+          container.innerHTML = '<div class="card"><div class="card-subtitle">No event lineup loaded.</div></div>';
+          return;
+        }
+
+        const byClass = {};
+        SAMPLE_EVENT_LINEUP.forEach(r => {
+          const cls = r.Class || r['Class'];
+          if (!cls) return;
+          if (!byClass[cls]) byClass[cls] = [];
+          byClass[cls].push(r);
+        });
+
+        const classNames = Object.keys(byClass).sort();
+        if (!classNames.length) {
+          container.innerHTML = '<div class="card"><div class="card-subtitle">No classes found in event lineup.</div></div>';
+          return;
+        }
+
+        container.innerHTML = '';
+
+        classNames.forEach(cls => {
+          const entries = byClass[cls].slice().sort((a, b) => {
+            const la = parseFloat(a['Line #'] || '0') || 0;
+            const lb = parseFloat(b['Line #'] || '0') || 0;
+            return la - lb;
+          });
+
+          const card = document.createElement('div');
+          card.className = 'card';
+
+          let html = '';
+          html += '<div class="card-header"><div>';
+          html += '<div class="card-title">' + escapeHTML(cls) + '</div>';
+          html += '<div class="card-subtitle">Jesup Friday · ' + entries.length + ' hooks</div>';
+          html += '</div></div>';
+          html += '<table><thead><tr>';
+          html += '<th>Hook #</th><th>Line #</th><th>Truck</th><th>Driver</th><th>SPA</th>';
+          html += '</tr></thead><tbody>';
+
+          entries.forEach((e, idx) => {
+            const hookNum = idx + 1;
+            const lineNum = e['Line #'] || '';
+            const truck = e.Truck || '';
+            const driver = e.Driver || '';
+            const spa = e['SPA Member'] === 'TRUE' ? 'Yes' : (e['SPA Member'] === 'FALSE' ? 'No' : '');
+            html += '<tr>';
+            html += '<td>' + hookNum + '</td>';
+            html += '<td>' + escapeHTML(lineNum) + '</td>';
+            html += '<td>' + escapeHTML(truck) + '</td>';
+            html += '<td>' + escapeHTML(driver) + '</td>';
+            html += '<td>' + spa + '</td>';
+            html += '</tr>';
+          });
+
+          html += '</tbody></table>';
+          card.innerHTML = html;
+          container.appendChild(card);
+        });
+      }
+
+      // Tiny sanity tests for parseRosterCSV so we know it behaves
+      (function testParseRosterCSV() {
+        const sample1 = 'Class,Membership #,Vehicle,Make / Model,Driver\n' +
+                        '2WD Prostock,7201,Haymaker,Chevy S-10,Cole Altman';
+        const rows1 = parseRosterCSV(sample1);
+        if (!Array.isArray(rows1) || rows1.length !== 1 || rows1[0]['Vehicle'] !== 'Haymaker') {
+          console.warn('parseRosterCSV test1 failed:', rows1);
+        }
+
+        const sample2 = 'Class,Membership #,Vehicle,Make / Model,Driver\n' +
+                        '6200 2WD Local,6201,Southern Thunder,Chevy C10,Jake Miller\n' +
+                        '6200 2WD Local,6202,Dirt Road Diva,Ford F-150,Sarah Collins';
+        const rows2 = parseRosterCSV(sample2);
+        if (!Array.isArray(rows2) || rows2.length !== 2 || rows2[1]['Driver'] !== 'Sarah Collins') {
+          console.warn('parseRosterCSV test2 failed:', rows2);
+        }
+      })();
+
+      document.addEventListener('DOMContentLoaded', () => {
+        // Tabs
+        const tabs = document.querySelectorAll('nav button');
+        const sections = document.querySelectorAll('main section[data-tab]');
+        tabs.forEach((btn, idx) => {
+          btn.addEventListener('click', () => {
+            tabs.forEach(b => b.classList.remove('active'));
+            sections.forEach(s => s.classList.remove('active'));
+            btn.classList.add('active');
+            if (sections[idx]) sections[idx].classList.add('active');
+          });
+        });
+
+        // Theme switching
+        const themeChips = document.querySelectorAll('.theme-chip');
+        const body = document.body;
+        const themeClasses = ['theme-purple', 'theme-blue', 'theme-neutral'];
+        function applyTheme(cls) {
+          body.classList.remove(...themeClasses);
+          body.classList.add(cls);
+        }
+        themeChips.forEach(chip => {
+          chip.addEventListener('click', () => {
+            const theme = chip.dataset.theme;
+            if (!theme) return;
+            applyTheme(theme);
+            themeChips.forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+          });
+        });
+        // default theme
+        applyTheme('theme-purple');
+        const defaultChip = document.querySelector('.theme-chip[data-theme="theme-purple"]');
+        if (defaultChip) defaultChip.classList.add('active');
+
+        // Settings collapse
+        const toggle = document.querySelector('.settings-toggle');
+        const panel = document.querySelector('.settings-panel');
+        if (toggle && panel) {
+          panel.classList.add('collapsed');
+          toggle.addEventListener('click', () => {
+            panel.classList.toggle('collapsed');
+          });
+        }
+
+        // Lineup builder: hook trucks from roster
+        const searchInput = document.getElementById('lineup-roster-search');
+        const drawInput = document.getElementById('lineup-draw-number');
+        const addButton = document.getElementById('add-to-lineup-btn');
+
+        function applyRosterSelectionFromSearch() {
+          const inputEl = document.getElementById('lineup-roster-search');
+          const datalist = document.getElementById('lineup-roster-options');
+          if (!inputEl || !datalist) return null;
+          const val = inputEl.value;
+          if (!val) return null;
+          const options = Array.from(datalist.options || []);
+          const match = options.find(o => o.value === val);
+          if (!match) return null;
+          const idx = parseInt(match.dataset.rowIndex || '-1', 10);
+          if (Number.isNaN(idx) || !rosterRows || !rosterRows[idx]) return null;
+          const row = rosterRows[idx];
+          const cls = row['Class'] || row['Cass'] || row['CLASS'] || '';
+          const vehicle = row['Vehicle'] || row['Truck'] || row['Truck Name'] || row['Vehicle Name'] || '';
+          const driver = row['Driver'] || row['Driver Name'] || '';
+
+          const clsInput = document.getElementById('lineup-class-display');
+          const truckInput = document.getElementById('lineup-truck-display');
+          const driverInput = document.getElementById('lineup-driver-display');
+          if (clsInput) clsInput.value = cls;
+          if (truckInput) truckInput.value = vehicle;
+          if (driverInput) driverInput.value = driver;
+
+          return { rowIndex: idx, row, className: cls, truck: vehicle, driver };
+        }
+
+        if (searchInput) {
+          searchInput.addEventListener('change', () => {
+            applyRosterSelectionFromSearch();
+          });
+          searchInput.addEventListener('blur', () => {
+            applyRosterSelectionFromSearch();
+          });
+        }
+
+        if (addButton) {
+          addButton.addEventListener('click', () => {
+            const sel = applyRosterSelectionFromSearch();
+            if (!sel) return;
+            const drawVal = drawInput ? drawInput.value.trim() : '';
+            if (!drawVal) return;
+            const drawNum = parseFloat(drawVal);
+            const spaMember = !!(sel.row['Membership #'] || sel.row['Membership'] || sel.row['Member #'] || sel.row['Member']);
+            eventLineup.push({
+              draw: Number.isNaN(drawNum) ? drawVal : drawNum,
+              Class: sel.className,
+              Truck: sel.truck,
+              Driver: sel.driver,
+              spaMember
+            });
+            renderEventLineup();
+          });
+        }
+
+        // Load roster for roster & lineup
+        loadRosterFromCSV();
+      });
+    })();
+  </script>
+</head>
+<body class="theme-purple">
+  <div class="app-shell">
+    <header>
+      <div class="brand">
+        <img src="https://thesouthernpullers.com/wp-content/uploads/2025/04/logo.png" alt="Southern Pullers Association logo">
+        <div>
+          <h1>LiveStats Engine</h1>
+          <p>Southern Pullers · Event Control Console</p>
+        </div>
+      </div>
+      <div class="event-meta">
+        <div class="sync-meta">Last sync: 00:24 ago</div>
+        <div class="badge">Offline capture ready · Sync when online</div><br>
+        <div style="margin-top:4px;">
+          Event: Summer Shootout · Ringgold, GA<br>
+          Operator: Secretary Console
+        </div>
+      </div>
+    </header>
+
+    <nav>
+      <button class="active">Roster</button>
+      <button>Lineup</button>
+      <button>Live Event</button>
+      <button>Results</button>
+      <button>Settings</button>
+    </nav>
+
+    <main>
+      <!-- ROSTER -->
+      <section data-tab class="active">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Add vehicle to roster</div>
+              <div class="card-subtitle">Add a new vehicle to this roster</div>
+            </div>
+          </div>
+          <div class="input-row">
+            <div class="field">
+              <label>Class</label>
+              <input type="text" placeholder="e.g. 6200 2WD Local">
+            </div>
+            <div class="field">
+              <label>Membership #</label>
+              <input type="text" placeholder="e.g. 6207">
+            </div>
+            <div class="field">
+              <label>Vehicle</label>
+              <input type="text" placeholder="Vehicle name">
+            </div>
+          </div>
+          <div class="input-row">
+            <div class="field">
+              <label>Make / Model</label>
+              <input type="text" placeholder="e.g. Chevy C10">
+            </div>
+            <div class="field">
+              <label>Driver</label>
+              <input type="text" placeholder="Driver name">
+            </div>
+            <div class="field"></div>
+          </div>
+          <button class="primary-btn" type="button">Add to roster</button>
+        </div>
+        <div id="roster-grid" class="lineup-grid">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">SPA Roster</div>
+                <div class="card-subtitle">Loading roster from master CSV…</div>
+              </div>
+            </div>
+            <p class="card-subtitle">If this never loads in your browser, check that the CSV link is public and CORS is allowed.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- LINEUP -->
+      <section data-tab>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Add truck to lineup</div>
+              <div class="card-subtitle">Search roster, assign Draw #, and add to tonight's event</div>
+            </div>
+          </div>
+          <div class="input-row">
+            <div class="field">
+              <label>Search vehicle / driver (from roster)</label>
+              <input type="text" id="lineup-roster-search" placeholder="Start typing truck or driver name…" list="lineup-roster-options">
+              <datalist id="lineup-roster-options"></datalist>
+            </div>
+            <div class="field">
+              <label>Draw #</label>
+              <input type="number" id="lineup-draw-number" placeholder="e.g. 5">
+            </div>
+            <div class="field">
+              <label>Class</label>
+              <input type="text" id="lineup-class-display" placeholder="Auto-filled from roster" readonly>
+            </div>
+          </div>
+          <div class="input-row">
+            <div class="field">
+              <label>Truck</label>
+              <input type="text" id="lineup-truck-display" placeholder="Auto-filled from roster" readonly>
+            </div>
+            <div class="field">
+              <label>Driver</label>
+              <input type="text" id="lineup-driver-display" placeholder="Auto-filled from roster" readonly>
+            </div>
+            <div class="field">
+              <label>&nbsp;</label>
+              <button class="primary-btn" type="button" id="add-to-lineup-btn">Add to lineup</button>
+            </div>
+          </div>
+        </div>
+        <div id="lineup-grid" class="lineup-grid">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Event lineup</div>
+                <div class="card-subtitle">No entries added yet. Use the form above to build tonight's draws.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- LIVE EVENT -->
+      <section data-tab>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Run Control</div>
+              <div class="card-subtitle">Live class input &amp; hook control</div>
+            </div>
+            <div class="card-subtitle" id="live-event-class-subtitle">Summer Shootout · 2WD Prostock</div>
+          </div>
+          <div class="tag-label">Class order tonight</div>
+          <div class="class-pill-row">
+            <div class="class-pill completed"><span class="dot"></span><span>6200 2WD Local</span></div>
+            <div class="class-pill completed"><span class="dot"></span><span>Light Limited SS</span></div>
+            <div class="class-pill active"><span class="dot"></span><span>2WD Prostock</span></div>
+            <div class="class-pill"><span class="dot"></span><span>4WD Modified</span></div>
+          </div>
+
+          <div class="status-row">
+            <div class="status-chip">
+              <div class="card-subtitle">Current Hook</div>
+              <div class="status-main" id="status-current-truck">Saturday Night Special</div>
+              
+            </div>
+            <div class="status-chip">
+              <div class="card-subtitle">On Deck</div>
+              <div class="status-main">Haymaker</div>
+              <div class="status-sub">Hook #4 · Cole Altman</div>
+            </div>
+            <div class="status-chip">
+              <div class="card-subtitle">Staging</div>
+              <div class="status-main">Bumper Crop</div>
+              <div class="status-sub">Hook #5 · Cody Williams</div>
+            </div>
+          </div>
+
+          <div class="tag-label">Class lineup · 2WD Prostock</div>
+          <div class="lineup-rail">
+            <div class="chip-card pulled">
+              <div class="meta">Hook #1 · Pulled</div>
+              <div class="truck">Haymaker</div>
+              <div class="meta">Driver: Cole Altman</div>
+            </div>
+            <div class="chip-card pulled">
+              <div class="meta">Hook #2 · Pulled · DQ</div>
+              <div class="truck">Outlaw Rebel</div>
+              <div class="meta">Driver: TBA</div>
+            </div>
+            <div class="chip-card current">
+              <div class="meta">Hook #3 · Current</div>
+              <div class="truck">Saturday Night Special</div>
+              <div class="meta">Driver: Justin Bennett</div>
+            </div>
+            <div class="chip-card">
+              <div class="meta">Hook #4 · On deck</div>
+              <div class="truck">Haymaker</div>
+              <div class="meta">Driver: Cole Altman</div>
+            </div>
+          </div>
+
+          <div class="input-row">
+            <div class="field">
+              <label>Truck (current hook)</label>
+              <input type="text" readonly value="Saturday Night Special · Justin Bennett">
+            </div>
+            <div class="field">
+              <label>Distance (ft)</label>
+              <input type="text" placeholder="e.g. 304.2">
+            </div>
+            <div class="field">
+              <label>Speed (mph)</label>
+              <input type="text" placeholder="e.g. 27.1">
+            </div>
+          </div>
+
+          <div class="tag-label">Hook flags</div>
+          <div class="flags-row">
+            <label class="flag-chip"><input type="checkbox"> DQ</label>
+            <label class="flag-chip"><input type="checkbox"> Under 100 ft scratch</label>
+            <label class="flag-chip"><input type="checkbox"> Sled reset</label>
+            <label class="flag-chip"><input type="checkbox"> Exhibition / test hook</label>
+          </div>
+
+          <button class="primary-btn">Submit hook to leaderboard</button>
+        </div>
+
+        <div class="live-grid">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Pace &amp; Timing</div>
+                <div class="card-subtitle">Flow between hooks and classes</div>
+              </div>
+            </div>
+            <div class="timer-row">
+              <div>Last hook recorded: <strong>00:46 ago</strong></div>
+              <div class="timer-chip">Current leg: <strong>01:19</strong></div>
+            </div>
+            <p class="card-subtitle" style="margin-top:6px;">Average tonight: 01:32 between hooks.</p>
+            <ul class="talk-list">
+              <li>Hook 1 – Haymaker · 01:31 between hooks</li>
+              <li>Hook 2 – Outlaw Rebel (DQ) · 01:42</li>
+              <li>Hook 3 – Saturday Night Special · 01:35</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Live Leaderboard</div>
+                <div class="card-subtitle">2WD Prostock · Ringgold, GA</div>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr><th>Place</th><th>Truck</th><th>Driver</th><th>Distance</th><th>Speed</th><th>Flags</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>1</td><td>Bumper Crop</td><td>Cody Williams</td><td>314.8 ft</td><td>28.1</td><td>—</td></tr>
+                <tr><td>2</td><td>Haymaker</td><td>Cole Altman</td><td>309.4 ft</td><td>27.6</td><td>—</td></tr>
+                <tr><td>3</td><td>Saturday Night Special</td><td>Justin Bennett</td><td>304.2 ft</td><td>27.1</td><td>—</td></tr>
+                <tr class="dq"><td>DQ</td><td>Outlaw Rebel</td><td>Driver TBA</td><td>287.1 ft</td><td>25.4</td><td>DQ (distance kept)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Class Stats &amp; Talking Points</div>
+              <div class="card-subtitle">Quick notes for announcers / overlays</div>
+            </div>
+          </div>
+          <ul class="talk-list">
+            <li>2WD Prostock: 3 of 6 hooks completed.</li>
+            <li>Current leader: <strong>Bumper Crop</strong> at 314.8 ft.</li>
+            <li>Average finished distance: ~309 ft.</li>
+            <li>Pace: about 01:30 between hooks.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- RESULTS -->
+      <section data-tab>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Event Results</div>
+              <div class="card-subtitle">Finished classes · export &amp; share</div>
+            </div>
+          </div>
+        </div>
+        <div class="results-grid">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">6200 2WD Local</div>
+                <div class="card-subtitle">Ringgold, GA · Class complete</div>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr><th>Place</th><th>Truck</th><th>Distance</th><th>Speed</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>1</td><td>Southern Thunder</td><td>316.2 ft</td><td>27.9</td></tr>
+                <tr><td>2</td><td>Dirt Road Diva</td><td>309.7 ft</td><td>26.8</td></tr>
+                <tr class="dq"><td>DQ</td><td>Hillbilly Habit</td><td>279.4 ft</td><td>24.9</td></tr>
+              </tbody>
+            </table>
+            <div class="export-links">
+              <a href="#">Export JPEG</a><span>·</span><a href="#">Share to Facebook</a>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Light Limited SS</div>
+                <div class="card-subtitle">Ringgold, GA · Class complete</div>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr><th>Place</th><th>Tractor</th><th>Distance</th><th>Speed</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>1</td><td>Whiskey Bent</td><td>318.4 ft</td><td>28.6</td></tr>
+                <tr><td>2</td><td>Southern Smoke</td><td>311.3 ft</td><td>27.5</td></tr>
+                <tr class="dq"><td>DQ</td><td>Iron Addiction</td><td>283.6 ft</td><td>24.4</td></tr>
+              </tbody>
+            </table>
+            <div class="export-links">
+              <a href="#">Export JPEG</a><span>·</span><a href="#">Share to Facebook</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section data-tab>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Console Settings</div>
+              <div class="card-subtitle">Look &amp; feel for this login</div>
+            </div>
+          </div>
+          <button class="settings-toggle">
+            <small>Theme</small>
+            <span>SPA color themes</span>
+            <span>⌃</span>
+          </button>
+          <div class="settings-panel">
+            <p class="card-subtitle" style="margin-top:6px;">Pick a theme for this console. This will also carry over to web overlays.</p>
+            <div class="theme-row">
+              <button c

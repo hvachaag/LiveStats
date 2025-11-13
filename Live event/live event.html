@@ -1,0 +1,140 @@
+<section data-tab>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Run Control</div>
+              <div class="card-subtitle">Live class input &amp; hook control</div>
+            </div>
+            <div class="card-subtitle" id="live-event-class-subtitle">Summer Shootout · 2WD Prostock</div>
+          </div>
+          <div class="tag-label">Class order tonight</div>
+          <div class="class-pill-row">
+            <div class="class-pill completed"><span class="dot"></span><span>6200 2WD Local</span></div>
+            <div class="class-pill completed"><span class="dot"></span><span>Light Limited SS</span></div>
+            <div class="class-pill active"><span class="dot"></span><span>2WD Prostock</span></div>
+            <div class="class-pill"><span class="dot"></span><span>4WD Modified</span></div>
+          </div>
+
+          <div class="status-row">
+            <div class="status-chip">
+              <div class="card-subtitle">Current Hook</div>
+              <div class="status-main" id="status-current-truck">Saturday Night Special</div>
+              
+            </div>
+            <div class="status-chip">
+              <div class="card-subtitle">On Deck</div>
+              <div class="status-main">Haymaker</div>
+              <div class="status-sub">Hook #4 · Cole Altman</div>
+            </div>
+            <div class="status-chip">
+              <div class="card-subtitle">Staging</div>
+              <div class="status-main">Bumper Crop</div>
+              <div class="status-sub">Hook #5 · Cody Williams</div>
+            </div>
+          </div>
+
+          <div class="tag-label">Class lineup · 2WD Prostock</div>
+          <div class="lineup-rail">
+            <div class="chip-card pulled">
+              <div class="meta">Hook #1 · Pulled</div>
+              <div class="truck">Haymaker</div>
+              <div class="meta">Driver: Cole Altman</div>
+            </div>
+            <div class="chip-card pulled">
+              <div class="meta">Hook #2 · Pulled · DQ</div>
+              <div class="truck">Outlaw Rebel</div>
+              <div class="meta">Driver: TBA</div>
+            </div>
+            <div class="chip-card current">
+              <div class="meta">Hook #3 · Current</div>
+              <div class="truck">Saturday Night Special</div>
+              <div class="meta">Driver: Justin Bennett</div>
+            </div>
+            <div class="chip-card">
+              <div class="meta">Hook #4 · On deck</div>
+              <div class="truck">Haymaker</div>
+              <div class="meta">Driver: Cole Altman</div>
+            </div>
+          </div>
+
+          <div class="input-row">
+            <div class="field">
+              <label>Truck (current hook)</label>
+              <input type="text" readonly value="Saturday Night Special · Justin Bennett">
+            </div>
+            <div class="field">
+              <label>Distance (ft)</label>
+              <input type="text" placeholder="e.g. 304.2">
+            </div>
+            <div class="field">
+              <label>Speed (mph)</label>
+              <input type="text" placeholder="e.g. 27.1">
+            </div>
+          </div>
+
+          <div class="tag-label">Hook flags</div>
+          <div class="flags-row">
+            <label class="flag-chip"><input type="checkbox"> DQ</label>
+            <label class="flag-chip"><input type="checkbox"> Under 100 ft scratch</label>
+            <label class="flag-chip"><input type="checkbox"> Sled reset</label>
+            <label class="flag-chip"><input type="checkbox"> Exhibition / test hook</label>
+          </div>
+
+          <button class="primary-btn">Submit hook to leaderboard</button>
+        </div>
+
+        <div class="live-grid">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Pace &amp; Timing</div>
+                <div class="card-subtitle">Flow between hooks and classes</div>
+              </div>
+            </div>
+            <div class="timer-row">
+              <div>Last hook recorded: <strong>00:46 ago</strong></div>
+              <div class="timer-chip">Current leg: <strong>01:19</strong></div>
+            </div>
+            <p class="card-subtitle" style="margin-top:6px;">Average tonight: 01:32 between hooks.</p>
+            <ul class="talk-list">
+              <li>Hook 1 – Haymaker · 01:31 between hooks</li>
+              <li>Hook 2 – Outlaw Rebel (DQ) · 01:42</li>
+              <li>Hook 3 – Saturday Night Special · 01:35</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Live Leaderboard</div>
+                <div class="card-subtitle">2WD Prostock · Ringgold, GA</div>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr><th>Place</th><th>Truck</th><th>Driver</th><th>Distance</th><th>Speed</th><th>Flags</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>1</td><td>Bumper Crop</td><td>Cody Williams</td><td>314.8 ft</td><td>28.1</td><td>—</td></tr>
+                <tr><td>2</td><td>Haymaker</td><td>Cole Altman</td><td>309.4 ft</td><td>27.6</td><td>—</td></tr>
+                <tr><td>3</td><td>Saturday Night Special</td><td>Justin Bennett</td><td>304.2 ft</td><td>27.1</td><td>—</td></tr>
+                <tr class="dq"><td>DQ</td><td>Outlaw Rebel</td><td>Driver TBA</td><td>287.1 ft</td><td>25.4</td><td>DQ (distance kept)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Class Stats &amp; Talking Points</div>
+              <div class="card-subtitle">Quick notes for announcers / overlays</div>
+            </div>
+          </div>
+          <ul class="talk-list">
+            <li>2WD Prostock: 3 of 6 hooks completed.</li>
+            <li>Current leader: <strong>Bumper Crop</strong> at 314.8 ft.</li>
+            <li>Average finished distance: ~309 ft.</li>
+            <li>Pace: about 01:30 between hooks.</li>
+          </ul>
+        </div>
+      </section>

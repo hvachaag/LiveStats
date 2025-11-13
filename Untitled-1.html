@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>LiveStats Engine – Roster Console</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    :root {
+      --ink: #0f172a;
+      --bg: #020617;
+      --bg-soft: #030712;
+      --card: #020617;
+      --muted: #9ca3af;
+      --border: #1f2937;
+
+      --primary: #4b0082;
+      --primary-soft: #3b0764;
+      --primary-bright: #a855f7;
+      --primary-shadow: rgba(76,29,149,0.6);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, var(--primary-soft), var(--bg));
+      color: #f9fafb;
+    }
+
+    .app-shell {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 12px 12px 32px;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-bright));
+      border-radius: 18px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 18px 45px var(--primary-shadow);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand img {
+      height: 28px;
+      width: auto;
+      display: block;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+    header p {
+      margin: 2px 0 0;
+      font-size: 0.8rem;
+      opacity: 0.9;
+    }
+    .event-meta {
+      text-align: right;
+      font-size: 0.8rem;
+    }
+    .sync-meta {
+      font-size: 0.72rem;
+      margin-bottom: 2px;
+      opacity: 0.85;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(248,250,252,0.2);
+      background: rgba(15,23,42,0.3);
+      font-size: 0.72rem;
+      margin-bottom: 3px;
+    }
+    .sync-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3px 10px;
+      margin-top: 4px;
+      border-radius: 999px;
+      border: 1px solid rgba(248,250,252,0.28);
+      background: rgba(15,23,42,0.85);
+      color: #e5e7eb;
+      font-size: 0.72rem;
+      cursor: pointer;
+    }
+    .sync-btn:hover {
+      background: rgba(15,23,42,1);
+      box-shadow: 0 4px 10px rgba(15,23,42,0.7);
+    }
+
+    nav {
+      margin-top: 14px;
+      display: inline-flex;
+      gap: 4px;
+      padding: 4px;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.95);
+      box-shadow: 0 12px 32px rgba(15,23,42,0.7);
+    }
+    nav button {
+      border: none;
+      background: transparent;
+      color: rgba(249,250,251,0.8);
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    nav button.active {
+      background: radial-gradient(circle at top left, var(--primary-soft), var(--primary-bright));
+      color: #f9fafb;
+      box-shadow: 0 10px 28px var(--primary-shadow);
+    }
+
+    main { margin-top: 18px; }
+    section[data-tab] { display: none; }
+    section[data-tab].active { display: block; }
+
+    .card {
+      background: radial-gradient(circle at top left, #111827, #020617);
+      border-radius: 16px;
+      padding: 14px 14px 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 18px 40px rgba(15,23,42,0.9);
+      margin-bottom: 14px;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .card-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .card-subtitle {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: minmax(0,1.5fr) repeat(2,minmax(0,1fr));
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 0.78rem;
+    }
+    .field { display: flex; flex-direction: column; gap: 3px; }
+    .field label { color: var(--muted); font-size: 0.74rem; }
+    .field input {
+      padding: 6px 8px;
+      border-radius: 9px;
+      border: 1px solid rgba(55,65,81,0.9);
+      background: rgba(15,23,42,0.96);
+      color: #e5e7eb;
+      font-size: 0.82rem;
+    }
+
+    .primary-btn {
+      margin-top: 12px;
+      width: 100%;
+      border-radius: 10px;
+      border: none;
+      padding: 8px 10px;
+      font-size: 0.86rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #022c22;
+      cursor: pointer;
+      box-shadow: 0 12px 30px rgba(22,163,74,0.7);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+    th, td {
+      padding: 5px 6px;
+      border-top: 1px solid rgba(31,41,55,0.9);
+      text-align: left;
+      white-space: nowrap;
+    }
+    thead th {
+      border-top: none;
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+
+    .context-menu {
+      position: fixed;
+      z-index: 9999;
+      min-width: 140px;
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid rgba(31,41,55,0.95);
+      background: rgba(15,23,42,0.98);
+      box-shadow: 0 18px 40px rgba(15,23,42,0.95);
+      font-size: 0.78rem;
+      display: none;
+    }
+    .context-menu.open {
+      display: block;
+    }
+    .context-menu button {
+      width: 100%;
+      border: none;
+      background: transparent;
+      color: #e5e7eb;
+      padding: 6px 8px;
+      border-radius: 6px;
+      text-align: left;
+      cursor: pointer;
+    }
+    .context-menu button:hover {
+      background: rgba(55,65,81,0.9);
+    }
+
+    @media (max-width: 900px) {
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+      .event-meta { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header>
+      <div class="brand">
+        <img src="https://thesouthernpullers.com/wp-content/uploads/2025/04/logo.png" alt="Southern Pullers Association logo">
+        <div>
+          <h1>LiveStats Engine</h1>
+          <p>Southern Pullers · Roster Console</p>
+        </div>
+      </div>
+      <div class="event-meta">
+        <div class="sync-meta">
+          <span id="sync-text">Waiting to sync… 00:00</span>
+        </div>
+        <div class="badge" id="sync-badge">Offline capture ready · Sync when online</div><br>
+        <button type="button" class="sync-btn" id="sync-now-btn">Sync now</button><br>
+        <div style="margin-top:4px;">
+          Event: Battle in The Boro' · Statesboro, GA<br>
+          Operator: Developer Console
+        </div>
+      </div>
+    </header>
+
+    <nav>
+      <button class="active">Roster</button>
+    </nav>
+
+    <main>
+      <section data-tab class="active">
+        <!-- Add / Edit form -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Add vehicle to roster</div>
+              <div class="card-subtitle">Add a new vehicle or edit an existing entry</div>
+            </div>
+          </div>
+
+          <div class="input-row">
+            <div class="field">
+              <label>Class</label>
+              <input id="roster-class-input" type="text" placeholder="e.g. 6200 2WD Local">
+            </div>
+            <div class="field">
+              <label>Membership #</label>
+              <input id="roster-membership-input" type="text" placeholder="e.g. 6207">
+            </div>
+            <div class="field">
+              <label>Vehicle</label>
+              <input id="roster-vehicle-input" type="text" placeholder="Vehicle name">
+            </div>
+          </div>
+
+          <div class="input-row">
+            <div class="field">
+              <label>Make / Model</label>
+              <input id="roster-make-input" type="text" placeholder="e.g. Chevy C10">
+            </div>
+            <div class="field">
+              <label>Driver</label>
+              <input id="roster-driver-input" type="text" placeholder="Driver name">
+            </div>
+            <div class="field"></div>
+          </div>
+
+          <button id="roster-submit-btn" class="primary-btn" type="button">
+            Add to roster
+          </button>
+        </div>
+
+        <!-- Roster table -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">SPA Roster</div>
+              <div class="card-subtitle">Loaded from master CSV (right-click a row to edit)</div>
+            </div>
+          </div>
+
+          <div id="roster-grid">
+            <table>
+              <thead>
+                <tr>
+                  <th>Class</th>
+                  <th>Membership #</th>
+                  <th>Vehicle</th>
+                  <th>Make / Model</th>
+                  <th>Driver</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="5">Loading roster…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Right-click context menu -->
+  <div id="roster-context-menu" class="context-menu" aria-hidden="true">
+    <button type="button" data-action="edit">Edit entry</button>
+  </div>
+
+  <script>
+    (function () {
+      const SPA_ROSTER_CSV_URL =
+        'https://thesouthernpullers.com/wp-content/uploads/2025/11/SPA-LiveStats-Engine-–-Sandbox-_-Dev-Roster.csv';
+
+      const SAMPLE_ROSTER = [
+        { Class: '6200 2WD Local', 'Membership #': '6201', Vehicle: 'Southern Thunder', 'Make / Model': 'Chevy C10', Driver: 'Jake Miller' },
+        { Class: '6200 2WD Local', 'Membership #': '6202', Vehicle: 'Dirt Road Diva', 'Make / Model': 'Ford F-150', Driver: 'Sarah Collins' },
+        { Class: '2WD Prostock', 'Membership #': '7201', Vehicle: 'Haymaker', 'Make / Model': 'Chevy S-10', Driver: 'Cole Altman' },
+        { Class: '2WD Prostock', 'Membership #': '7202', Vehicle: 'Bumper Crop', 'Make / Model': 'Ford F-250', Driver: 'Cody Williams' },
+        { Class: '2WD Prostock', 'Membership #': '7203', Vehicle: 'Saturday Night Special', 'Make / Model': 'Dodge Ram', Driver: 'Justin Bennett' }
+      ];
+
+      let rosterRows = [];
+      let rosterEditState = { mode: 'add', targetIndex: null };
+      let currentRosterContextRow = null;
+
+      // --- Sync timer state ---
+      let lastSyncAt = null;
+      let syncIntervalId = null;
+
+      function formatElapsed(ms) {
+        const sec = Math.floor(ms / 1000);
+        const h = Math.floor(sec / 3600);
+        const m = Math.floor((sec % 3600) / 60);
+        const s = sec % 60;
+        const two = n => String(n).padStart(2, '0');
+        return h > 0 ? h + ':' + two(m) + ':' + two(s) : two(m) + ':' + two(s);
+      }
+
+      function renderSyncText() {
+        const label = document.getElementById('sync-text');
+        const badge = document.getElementById('sync-badge');
+        if (!label) return;
+
+        if (!lastSyncAt) {
+          const startedAt = window.__syncWaitingStartedAt || Date.now();
+          window.__syncWaitingStartedAt = startedAt;
+          const elapsed = Date.now() - startedAt;
+          label.textContent = 'Waiting to sync… ' + formatElapsed(elapsed);
+          if (badge) {
+            badge.textContent = navigator.onLine
+              ? 'Online · waiting for server sync'
+              : 'Offline capture ready · Sync when online';
+          }
+        } else {
+          const elapsed = Date.now() - lastSyncAt.getTime();
+          label.textContent = 'Last sync: ' + formatElapsed(elapsed) + ' ago';
+          if (badge) {
+            badge.textContent = 'Synced · data current at last update';
+          }
+        }
+      }
+
+      function startSyncTicker() {
+        if (syncIntervalId) clearInterval(syncIntervalId);
+        renderSyncText();
+        syncIntervalId = setInterval(renderSyncText, 1000);
+      }
+
+      function markSynced() {
+        lastSyncAt = new Date();
+        window.__syncWaitingStartedAt = null;
+        renderSyncText();
+      }
+
+      function syncNow() {
+        loadRosterFromCSV();
+      }
+
+      function escapeHTML(str) {
+        return String(str || '').replace(/[&<>"']/g, function (c) {
+          switch (c) {
+            case '&': return '&amp;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '"': return '&quot;';
+            case "'": return '&#39;';
+            default: return c;
+          }
+        });
+      }
+
+      function parseRosterCSV(text) {
+        const lines = text.split(/\r?\n/).filter(Boolean);
+        if (!lines.length) return [];
+        const headers = lines[0].split(',').map(function (h) { return h.trim(); });
+        const rows = [];
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i];
+          if (!line) continue;
+          const cells = line.split(',');
+          const row = {};
+          headers.forEach(function (h, idx) {
+            row[h] = (cells[idx] || '').trim();
+          });
+          rows.push(row);
+        }
+        return rows;
+      }
+
+      function renderRosterIntoGrid(grid, rows) {
+        if (!grid) return;
+        const tbody = grid.querySelector('tbody');
+        if (!tbody) return;
+
+        if (!rows || !rows.length) {
+          tbody.innerHTML = '<tr><td colspan="5">Roster is empty.</td></tr>';
+          return;
+        }
+
+        let html = '';
+        rows.forEach(function (row, idx) {
+          const cls = row['Class'] || row['Cass'] || row['CLASS'] || '';
+          const mem = row['Membership #'] || row['Membership'] || row['Member #'] || row['Member'] || '';
+          const vehicle = row['Vehicle'] || row['Truck'] || row['Truck Name'] || row['Vehicle Name'] || '';
+          const makeModel = row['Make / Model'] || row['Make/Model'] || row['Make'] || '';
+          const driver = row['Driver'] || row['Driver Name'] || '';
+
+          html += '<tr data-index="' + idx + '">';
+          html += '<td>' + escapeHTML(cls) + '</td>';
+          html += '<td>' + escapeHTML(mem) + '</td>';
+          html += '<td>' + escapeHTML(vehicle) + '</td>';
+          html += '<td>' + escapeHTML(makeModel) + '</td>';
+          html += '<td>' + escapeHTML(driver) + '</td>';
+          html += '</tr>';
+        });
+
+        tbody.innerHTML = html;
+      }
+
+      function attachRosterRowHandlers() {
+        const grid = document.getElementById('roster-grid');
+        if (!grid) return;
+        const rows = grid.querySelectorAll('tbody tr');
+        rows.forEach(function (row) {
+          row.addEventListener('contextmenu', function (evt) {
+            openRosterContextMenu(evt, row);
+          });
+        });
+      }
+
+      function openRosterContextMenu(evt, row) {
+        const menu = document.getElementById('roster-context-menu');
+        if (!menu) return;
+        evt.preventDefault();
+        closeRosterContextMenu();
+        currentRosterContextRow = row;
+        const x = evt.clientX;
+        const y = evt.clientY;
+        menu.style.left = x + 'px';
+        menu.style.top = y + 'px';
+        menu.classList.add('open');
+      }
+
+      function closeRosterContextMenu() {
+        const menu = document.getElementById('roster-context-menu');
+        if (!menu) return;
+        menu.classList.remove('open');
+        currentRosterContextRow = null;
+      }
+
+      function getRosterFormElements() {
+        return {
+          cls: document.getElementById('roster-class-input'),
+          membership: document.getElementById('roster-membership-input'),
+          vehicle: document.getElementById('roster-vehicle-input'),
+          make: document.getElementById('roster-make-input'),
+          driver: document.getElementById('roster-driver-input'),
+          submit: document.getElementById('roster-submit-btn')
+        };
+      }
+
+      function beginEditRosterRow(row) {
+        const els = getRosterFormElements();
+        if (!els.cls) return;
+
+        const idx = parseInt(row.getAttribute('data-index'), 10);
+        if (isNaN(idx) || !rosterRows[idx]) return;
+        const data = rosterRows[idx];
+
+        els.cls.value = data['Class'] || '';
+        els.membership.value = data['Membership #'] || data['Membership'] || data['Member #'] || data['Member'] || '';
+        els.vehicle.value = data['Vehicle'] || data['Truck'] || data['Truck Name'] || data['Vehicle Name'] || '';
+        els.make.value = data['Make / Model'] || data['Make/Model'] || data['Make'] || '';
+        els.driver.value = data['Driver'] || data['Driver Name'] || '';
+
+        rosterEditState.mode = 'edit';
+        rosterEditState.targetIndex = idx;
+        if (els.submit) els.submit.textContent = 'Update roster entry';
+      }
+
+      function loadRosterFromCSV() {
+        const grid = document.getElementById('roster-grid');
+
+        fetch(SPA_ROSTER_CSV_URL)
+          .then(function (resp) {
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            return resp.text();
+          })
+          .then(function (text) {
+            const rows = parseRosterCSV(text);
+            rosterRows = rows.length ? rows : SAMPLE_ROSTER.slice();
+            renderRosterIntoGrid(grid, rosterRows);
+            attachRosterRowHandlers();
+            markSynced();
+          })
+          .catch(function (err) {
+            console.warn('Error loading SPA roster CSV, using sample roster instead:', err);
+            rosterRows = SAMPLE_ROSTER.slice();
+            renderRosterIntoGrid(grid, rosterRows);
+            attachRosterRowHandlers();
+          });
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        // Sync ticker
+        startSyncTicker();
+        window.addEventListener('online', renderSyncText);
+        window.addEventListener('offline', renderSyncText);
+
+        const syncBtn = document.getElementById('sync-now-btn');
+        if (syncBtn) {
+          syncBtn.addEventListener('click', function () {
+            syncNow();
+          });
+        }
+
+        // Context menu interactions
+        const rosterMenu = document.getElementById('roster-context-menu');
+        if (rosterMenu) {
+          rosterMenu.addEventListener('click', function (evt) {
+            const btn = evt.target.closest('button[data-action]');
+            if (!btn) return;
+            const action = btn.getAttribute('data-action');
+            if (action === 'edit' && currentRosterContextRow) {
+              beginEditRosterRow(currentRosterContextRow);
+            }
+            closeRosterContextMenu();
+          });
+        }
+
+        document.addEventListener('click', function (evt) {
+          const menu = document.getElementById('roster-context-menu');
+          if (!menu || !menu.classList.contains('open')) return;
+          if (!menu.contains(evt.target)) {
+            closeRosterContextMenu();
+          }
+        });
+
+        document.addEventListener('keydown', function (evt) {
+          if (evt.key === 'Escape') {
+            closeRosterContextMenu();
+          }
+        });
+
+        // Add / edit form logic
+        const rosterEls = getRosterFormElements();
+        if (rosterEls.submit) {
+          rosterEls.submit.addEventListener('click', function () {
+            if (!rosterEls.cls || !rosterEls.membership) return;
+
+            const newRow = {
+              Class: (rosterEls.cls.value || '').trim(),
+              'Membership #': (rosterEls.membership.value || '').trim(),
+              Vehicle: (rosterEls.vehicle.value || '').trim(),
+              'Make / Model': (rosterEls.make.value || '').trim(),
+              Driver: (rosterEls.driver.value || '').trim()
+            };
+
+            if (!newRow.Class && !newRow.Vehicle) return;
+
+            if (rosterEditState.mode === 'edit' &&
+                rosterEditState.targetIndex != null &&
+                rosterRows[rosterEditState.targetIndex]) {
+              rosterRows[rosterEditState.targetIndex] =
+                Object.assign({}, rosterRows[rosterEditState.targetIndex], newRow);
+            } else {
+              rosterRows.push(newRow);
+            }
+
+            const grid = document.getElementById('roster-grid');
+            renderRosterIntoGrid(grid, rosterRows);
+            attachRosterRowHandlers();
+
+            // Reset state back to "add"
+            rosterEditState.mode = 'add';
+            rosterEditState.targetIndex = null;
+            if (rosterEls.submit) rosterEls.submit.textContent = 'Add to roster';
+          });
+        }
+
+        // Initial load
+        loadRosterFromCSV();
+      });
+    })();
+  </script>
+</body>
+</html>

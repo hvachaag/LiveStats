@@ -1,0 +1,4437 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="disable-extensions" content="true">
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' https://docs.google.com https://thesouthernpullers.com https://script.google.com;">
+  <title>LiveStats Engine - Event Console</title>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --bg: #020617;
+      --bg-soft: #030712;
+      --card: #020617;
+      --muted: #9ca3af;
+      --border: #1f2937;
+
+      --primary: #4b0082;
+      --primary-soft: #3b0764;
+      --primary-bright: #a855f7;
+      --primary-shadow: rgba(76,29,149,0.6);
+
+      /* Glow variables (defaults = mid) */
+      --glow-primary: 0 12px 30px rgba(22,163,74,0.7);
+      --glow-primary-hover: 0 16px 40px rgba(22,163,74,0.8);
+      --glow-danger: 0 12px 30px rgba(220, 38, 38, 0.7);
+      --glow-danger-hover: 0 16px 40px rgba(220, 38, 38, 0.8);
+      --glow-accent: 0 10px 26px var(--primary-shadow);
+      --glow-nav-active: 0 10px 28px var(--primary-shadow);
+    }
+
+    body.theme-purple {
+      --primary: #4b0082;
+      --primary-soft: #3b0764;
+      --primary-bright: #a855f7;
+      --primary-shadow: rgba(76,29,149,0.6);
+    }
+    body.theme-blue {
+      --primary: #2563eb;
+      --primary-soft: #1d4ed8;
+      --primary-bright: #60a5fa;
+      --primary-shadow: rgba(37,99,235,0.6);
+    }
+    body.theme-neutral {
+      --primary: #4b5563;
+      --primary-soft: #374151;
+      --primary-bright: #9ca3af;
+      --primary-shadow: rgba(75,85,99,0.6);
+    }
+
+    /* Light mode overrides */
+    body.light-mode {
+      --ink: #111827;
+      --bg: #f1f5f9;
+      --bg-soft: #f8fafc;
+      --card: #ffffff;
+      --muted: #64748b;
+      --border: #cbd5e1;
+      color: #0f172a;
+      background: radial-gradient(circle at top left, var(--primary-soft), var(--bg));
+    }
+    body.light-mode header {
+      color: #0f172a;
+    }
+    body.light-mode .card {
+      background: linear-gradient(135deg, #ffffff, #f1f5f9);
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 28px rgba(0,0,0,0.08);
+      color: #0f172a;
+    }
+    body.light-mode nav {
+      background: rgba(255,255,255,0.85);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+    }
+    body.light-mode nav button {
+      color: #334155;
+    }
+    body.light-mode nav button.active {
+      color: #fff;
+    }
+    body.light-mode .theme-chip {
+      background: rgba(255,255,255,0.9);
+      color: #334155;
+      border-color: #cbd5e1;
+    }
+    body.light-mode .modal {
+      background: #ffffff;
+      color: #0f172a;
+      box-shadow: 0 12px 34px rgba(0,0,0,0.25);
+    }
+    body.light-mode .modal-header h2 { color: #0f172a; }
+    body.light-mode input:not([type=color]), body.light-mode textarea, body.light-mode select {
+      background: #ffffff;
+      color: #0f172a;
+      border: 1px solid #cbd5e1;
+    }
+    body.light-mode .badge.connected { background: #10b981; }
+    body.light-mode .badge.offline { background: #dc2626; }
+    body.light-mode .badge.connecting { background: #f59e0b; }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, var(--primary-soft), var(--bg));
+      color: #f9fafb;
+    }
+    .app-shell {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 12px 12px 32px;
+      min-height: 100vh;
+    }
+    header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-bright));
+      border-radius: 18px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 18px 45px var(--primary-shadow);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand img {
+      height: 28px;
+      width: auto;
+      display: block;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+    header p {
+      margin: 2px 0 0;
+      font-size: 0.8rem;
+      opacity: 0.9;
+    }
+    .event-meta {
+      text-align: right;
+      font-size: 0.8rem;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(248,250,252,0.2);
+      background: rgba(15,23,42,0.3);
+      font-size: 0.72rem;
+      margin-bottom: 3px;
+      transition: all 0.3s ease;
+    }
+    .badge.connected {
+      background: rgba(34, 197, 94, 0.2);
+      border-color: rgba(34, 197, 94, 0.4);
+      color: #86efac;
+    }
+    .badge.offline {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+    .badge.connecting {
+      background: rgba(251, 191, 36, 0.2);
+      border-color: rgba(251, 191, 36, 0.4);
+      color: #fde047;
+    }
+    .sync-meta {
+      font-size: 0.72rem;
+      margin-bottom: 2px;
+      opacity: 0.85;
+    }
+
+    nav {
+      margin-top: 14px;
+      display: inline-flex;
+      gap: 4px;
+      padding: 4px;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.95);
+      box-shadow: 0 12px 32px rgba(15,23,42,0.7);
+    }
+    nav button {
+      border: none;
+      background: transparent;
+      color: rgba(249,250,251,0.8);
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    nav button.active {
+      background: radial-gradient(circle at top left, var(--primary-soft), var(--primary-bright));
+      color: #f9fafb;
+      box-shadow: var(--glow-nav-active);
+    }
+    nav .nav-separator {
+      width: 1px;
+      background: rgba(249,250,251,0.2);
+      margin: 0 16px;
+      align-self: stretch;
+    }
+
+    main { margin-top: 18px; }
+    section[data-tab] { display: none; }
+    section[data-tab].active { display: block; }
+
+    .card {
+      background: radial-gradient(circle at top left, #111827, #020617);
+      border-radius: 16px;
+      padding: 14px 14px 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 18px 40px rgba(15,23,42,0.9);
+      margin-bottom: 14px;
+    }
+
+    /* Compact density tweaks */
+    body.density-compact .card { padding: 10px 10px 12px; }
+    body.density-compact table th, body.density-compact table td { padding: 6px 8px; }
+    body.density-compact .field { margin-bottom: 8px; }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .card-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .card-subtitle {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .lineup-grid,
+    .results-grid,
+    .live-grid {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+      gap: 12px;
+    }
+    .live-grid {
+      grid-template-columns: minmax(0,1.6fr) minmax(0,1.2fr);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+    th, td {
+      padding: 5px 6px;
+      border-top: 1px solid rgba(31,41,55,0.9);
+      text-align: left;
+      white-space: nowrap;
+    }
+    thead th {
+      border-top: none;
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+    
+    tbody tr.dq {
+      color: #f97373;
+    }
+
+    /* Allow wrapping inside Live Event leaderboard so text stays inside the card */
+    .live-grid table th,
+    .live-grid table td {
+      white-space: normal;
+    }
+
+    .lineup-select {
+      width: 100%;
+      padding: 4px 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(55,65,81,0.9);
+      background: rgba(15,23,42,0.9);
+      color: #e5e7eb;
+      font-size: 0.8rem;
+    }
+
+    .tag-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin: 10px 0 4px;
+    }
+
+    .class-pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .class-pill {
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(55,65,81,0.9);
+      background: rgba(15,23,42,0.95);
+      font-size: 0.72rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .class-pill span.dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(148,163,184,0.9);
+    }
+    .class-pill.completed {
+      background: #16a34a;
+      border-color: #16a34a;
+      color: #ecfdf5;
+    }
+    .class-pill.completed span.dot { background: #bbf7d0; }
+    .class-pill.active {
+      background: linear-gradient(135deg, var(--primary), var(--primary-bright));
+      border-color: rgba(219,234,254,0.9);
+    }
+
+    .status-row {
+      display: grid;
+      grid-template-columns: repeat(3,minmax(0,1fr));
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 0.76rem;
+    }
+    .status-chip {
+      border-radius: 10px;
+      border: 1px solid rgba(55,65,81,0.9);
+      padding: 6px 8px;
+      background: rgba(15,23,42,0.95);
+    }
+    .status-main {
+      font-weight: 600;
+      font-size: 0.86rem;
+    }
+    .status-sub {
+      color: var(--muted);
+      font-size: 0.74rem;
+    }
+
+    .lineup-rail {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+    .chip-card {
+      min-width: 150px;
+      border-radius: 12px;
+      border: 1px solid rgba(55,65,81,0.9);
+      background: rgba(15,23,42,0.96);
+      padding: 6px 8px;
+      font-size: 0.76rem;
+    }
+    .chip-card .truck { font-weight: 600; }
+    .chip-card .meta { color: var(--muted); font-size: 0.7rem; }
+    .chip-card.pulled { opacity: 0.55; border-style: dashed; }
+    .chip-card.current { border-color: var(--primary-bright); }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: minmax(0,1.5fr) repeat(2,minmax(0,1fr));
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 0.78rem;
+    }
+    .field { display: flex; flex-direction: column; gap: 3px; }
+    .field label { color: var(--muted); font-size: 0.74rem; }
+    .field input {
+      padding: 6px 8px;
+      border-radius: 9px;
+      border: 1px solid rgba(55,65,81,0.9);
+      background: rgba(15,23,42,0.96);
+      color: #e5e7eb;
+      font-size: 0.82rem;
+    }
+    .field input[readonly] { border-style: dashed; color: var(--muted); }
+
+    .flags-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+      font-size: 0.76rem;
+    }
+    .flag-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(55,65,81,0.9);
+      background: rgba(15,23,42,0.96);
+    }
+
+    .primary-btn {
+      margin-top: 12px;
+      width: 100%;
+      border-radius: 10px;
+      border: none;
+      padding: 8px 10px;
+      font-size: 0.86rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #022c22;
+      cursor: pointer;
+      box-shadow: var(--glow-primary);
+    }
+
+    .timer-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .timer-chip {
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px dashed rgba(148,163,184,0.7);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .talk-list {
+      margin: 6px 0 0;
+      padding-left: 18px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .talk-list strong { color: #e5e7eb; }
+
+    .export-links {
+      margin-top: 6px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .export-links a {
+      color: var(--primary-bright);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .export-links span { margin: 0 5px; }
+
+    .settings-toggle {
+      width: 100%;
+      border-radius: 12px;
+      padding: 8px 11px;
+      background: linear-gradient(135deg, var(--primary-soft), var(--primary-bright));
+      border: 1px solid rgba(248,250,252,0.16);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      font-size: 0.8rem;
+      color: #f9fafb;
+      box-shadow: var(--glow-accent);
+    }
+    .settings-toggle small {
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: rgba(249,250,251,0.85);
+      font-size: 0.7rem;
+    }
+    .settings-panel { margin-top: 8px; }
+    .settings-panel.collapsed { display: none; }
+
+    .theme-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .theme-chip {
+      padding: 5px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(55,65,81,0.9);
+      font-size: 0.78rem;
+      cursor: pointer;
+      background: rgba(15,23,42,0.96);
+      color: #e5e7eb;
+      transition: box-shadow 0.15s ease, transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+    }
+    .theme-chip:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(15,23,42,0.9);
+    }
+
+    /* Per-theme preview styling */
+    .theme-chip[data-theme="theme-purple"] {
+      background: linear-gradient(135deg, #3b0764, #a855f7);
+      border-color: rgba(216,180,254,0.9);
+      color: #fdf4ff;
+    }
+    .theme-chip[data-theme="theme-blue"] {
+      background: linear-gradient(135deg, #1d4ed8, #60a5fa);
+      border-color: rgba(191,219,254,0.95);
+      color: #eff6ff;
+    }
+    .theme-chip[data-theme="theme-neutral"] {
+      background: linear-gradient(135deg, #111827, #4b5563);
+      border-color: rgba(148,163,184,0.9);
+      color: #e5e7eb;
+    }
+
+    .theme-chip.active {
+      box-shadow: 0 0 0 1px #f9fafb, 0 10px 24px var(--primary-shadow);
+    }
+
+    /* Edit Modal Styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+      border: 1px solid rgba(55, 65, 81, 0.9);
+    }
+
+    .modal-header {
+      margin-bottom: 20px;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 1.3rem;
+      color: #f9fafb;
+    }
+
+    .modal-header p {
+      margin: 4px 0 0;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .modal-content {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .modal-btn {
+      flex: 1;
+      padding: 10px 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.86rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .modal-btn.save {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #022c22;
+      box-shadow: var(--glow-primary);
+    }
+
+    .modal-btn.save:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--glow-primary-hover);
+    }
+
+    .modal-btn.cancel {
+      background: rgba(55, 65, 81, 0.9);
+      color: #e5e7eb;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+    }
+
+    .modal-btn.cancel:hover {
+      background: rgba(75, 85, 99, 0.9);
+    }
+
+    .modal-btn.delete {
+      background: linear-gradient(135deg, #dc2626, #991b1b);
+      color: #ffffff;
+      box-shadow: var(--glow-danger);
+    }
+
+    .modal-btn.delete:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--glow-danger-hover);
+    }
+
+    /* Glow intensity classes */
+    body.glow-off {
+      --glow-primary: none;
+      --glow-primary-hover: none;
+      --glow-danger: none;
+      --glow-danger-hover: none;
+      --glow-accent: none;
+      --glow-nav-active: none;
+    }
+    body.glow-mid {
+      --glow-primary: 0 12px 30px rgba(22,163,74,0.7);
+      --glow-primary-hover: 0 16px 40px rgba(22,163,74,0.8);
+      --glow-danger: 0 12px 30px rgba(220, 38, 38, 0.7);
+      --glow-danger-hover: 0 16px 40px rgba(220, 38, 38, 0.8);
+      --glow-accent: 0 10px 26px var(--primary-shadow);
+      --glow-nav-active: 0 10px 28px var(--primary-shadow);
+    }
+    body.glow-high {
+      --glow-primary: 0 18px 46px rgba(22,163,74,0.95);
+      --glow-primary-hover: 0 24px 60px rgba(22,163,74,1);
+      --glow-danger: 0 18px 46px rgba(220, 38, 38, 0.95);
+      --glow-danger-hover: 0 24px 60px rgba(220, 38, 38, 1);
+      --glow-accent: 0 16px 42px var(--primary-shadow);
+      --glow-nav-active: 0 16px 44px var(--primary-shadow);
+    }
+
+    /* Detail rows styling */
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(55, 65, 81, 0.6);
+    }
+
+    .detail-row:last-child {
+      border-bottom: none;
+    }
+
+    .detail-row label {
+      font-weight: 600;
+      color: var(--muted);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .detail-value {
+      color: #f9fafb;
+      font-size: 0.9rem;
+      text-align: right;
+      flex: 1;
+      margin-left: 12px;
+    }
+
+    /* Detail display mode - read-only fields */
+    .detail-display {
+      background: rgba(15, 23, 42, 0.6) !important;
+      border: 1px dashed rgba(55, 65, 81, 0.7) !important;
+      color: var(--muted) !important;
+      cursor: not-allowed !important;
+    }
+
+    .detail-display:disabled {
+      opacity: 0.8;
+    }
+
+    /* Detail edit mode - editable fields */
+    .detail-edit {
+      background: rgba(15, 23, 42, 0.96) !important;
+      border: 1px solid rgba(55, 65, 81, 0.9) !important;
+      color: #e5e7eb !important;
+      cursor: text !important;
+    }
+
+    .detail-edit:disabled {
+      opacity: 1;
+    }
+
+    /* Clickable row styling */
+    table tbody tr {
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+
+    table tbody tr:hover {
+      background-color: rgba(168, 85, 247, 0.2);
+    }
+
+    @media (max-width: 900px) {
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+      .event-meta { text-align: left; }
+      .lineup-grid,
+      .results-grid,
+      .live-grid {
+        grid-template-columns: minmax(0,1fr);
+      }
+    }
+
+    /* Live Event Specific Styles */
+    .tag-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: rgba(249,250,251,0.6);
+      margin: 16px 0 8px;
+    }
+
+    .class-pill-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .class-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(15,23,42,0.7);
+      border: 1px solid rgba(55,65,81,0.9);
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: rgba(249,250,251,0.7);
+    }
+
+    .class-pill .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(148,163,184,0.5);
+    }
+
+    .class-pill.completed {
+      background: rgba(34,197,94,0.15);
+      border-color: #22c55e;
+      color: #22c55e;
+    }
+
+    .class-pill.completed .dot {
+      background: #22c55e;
+    }
+
+    .class-pill.active {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      border-color: var(--primary);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .class-pill.active .dot {
+      background: #fff;
+      box-shadow: 0 0 8px rgba(255,255,255,0.5);
+    }
+
+    .status-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin: 20px 0;
+    }
+
+    .status-chip {
+      background: rgba(15,23,42,0.5);
+      border: 1px solid rgba(55,65,81,0.9);
+      border-radius: 12px;
+      padding: 16px;
+      transition: all 0.2s ease;
+    }
+
+    .status-chip:hover {
+      transform: translateY(-2px);
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .status-chip .card-subtitle {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: rgba(249,250,251,0.5);
+      margin-bottom: 8px;
+    }
+
+    .status-chip .status-main {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: rgba(249,250,251,0.95);
+      margin-bottom: 4px;
+    }
+
+    .status-chip .status-sub {
+      font-size: 0.8rem;
+      color: rgba(249,250,251,0.6);
+    }
+
+    .status-chip:first-child {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      border-color: var(--primary);
+    }
+
+    .status-chip:first-child .card-subtitle,
+    .status-chip:first-child .status-main,
+    .status-chip:first-child .status-sub {
+      color: #fff;
+    }
+
+    .lineup-rail {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding: 12px 0;
+      margin-bottom: 20px;
+    }
+
+    .chip-card {
+      min-width: 200px;
+      background: rgba(15,23,42,0.5);
+      border: 1px solid rgba(55,65,81,0.9);
+      border-radius: 12px;
+      padding: 12px 16px;
+      user-select: none;
+    }
+
+    .chip-card:hover {
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .chip-card .meta {
+      font-size: 0.7rem;
+      color: rgba(249,250,251,0.5);
+      margin-bottom: 4px;
+    }
+
+    .chip-card .truck {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: rgba(249,250,251,0.95);
+      margin-bottom: 6px;
+    }
+
+    .chip-card.pulled {
+      opacity: 0.6;
+    }
+
+    .chip-card.current {
+      background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.3), rgba(var(--primary-rgb), 0.1));
+      border: 2px solid var(--primary);
+    }
+
+    .chip-card.current .truck {
+      color: var(--primary);
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .flags-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .flag-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: rgba(15,23,42,0.5);
+      border: 1px solid rgba(55,65,81,0.9);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: rgba(249,250,251,0.8);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .flag-chip:hover {
+      background: rgba(15,23,42,0.8);
+      border-color: var(--primary);
+    }
+
+    .flag-chip input[type="checkbox"] {
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .live-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    table tr.dq {
+      opacity: 0.5;
+      text-decoration: line-through;
+    }
+
+    @media (max-width: 768px) {
+      .input-row {
+        grid-template-columns: 1fr;
+      }
+      .status-row {
+        grid-template-columns: 1fr;
+      }
+      .live-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Loading Screen */
+    #loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      opacity: 1;
+      transition: opacity 1.5s ease-out;
+    }
+
+    #loading-screen.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-logo {
+      width: 120px;
+      height: 120px;
+      margin-bottom: 30px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .loading-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 0 20px rgba(103, 126, 234, 0.5));
+    }
+
+    .loading-title {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #f9fafb;
+      margin-bottom: 10px;
+      letter-spacing: 1px;
+    }
+
+    .loading-subtitle {
+      font-size: 1rem;
+      color: rgba(249, 250, 251, 0.6);
+      margin-bottom: 40px;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(103, 126, 234, 0.2);
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .loading-status {
+      margin-top: 20px;
+      font-size: 0.9rem;
+      color: rgba(249, 250, 251, 0.5);
+      font-style: italic;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+      }
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+  <script>
+    (function () {
+      const SPA_ROSTER_CSV_URL = 'https://thesouthernpullers.com/wp-content/uploads/2025/11/SPA-LiveStats-Engine-–-Sandbox-_-Dev-Roster.csv';
+      const JESUP_LINEUP_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQEPtdntSso-1gltfBl2drK-E9osbPWo1A3L3sc5q7Uy4QnSMFgUpRBVnLcoGEVVYjZvxByozTuJTGx/pub?gid=1778387251&single=true&output=csv';
+
+      // Fallback lineup CSV data (for local development when CORS blocks fetch)
+      const JESUP_LINEUP_CSV_DATA = `SPA Member,Line #,Class,Driver,Truck,Distance,Speed,DQ,Place,Points
+TRUE,15,2wd Modified,Trevor Beasley,Kuntry Boyz Toy,,,FALSE,,
+TRUE,5,2wd Modified,Johnny Brown,Hog Wild,,,FALSE,,
+TRUE,56,2wd Modified,Johnny Brown,Wild Hog,,,FALSE,,
+FALSE,57,2wd Modified,Clayton Blocker,Wild Thang,,,FALSE,,
+TRUE,10,4wd Prostock,Carson Blocker,Mean Green,,,FALSE,,
+FALSE,20,4wd Prostock,Al Durrence,Mr. Sparkle,,,FALSE,,
+TRUE,23,4wd Prostreet,Cameron Miller,Yo Mama,,,FALSE,,
+TRUE,43,4wd Prostreet,Ethan Jenkins,High Voltage,,,FALSE,,
+TRUE,7,Super Semi,Chris Hall,Mental Health,,,FALSE,,
+TRUE,44,Super Semi,Colby Hall,Barely Making It,,,FALSE,,
+TRUE,26,2wd Supermodified,Justin Bennett,Lawless,,,FALSE,,
+TRUE,30,2wd Supermodified,Carter Stewart,Saturday Night Special,,,FALSE,,
+TRUE,25,2wd Supermodified,Cole Altman,Bumper Crop,,,FALSE,,
+TRUE,60,2wd Supermodified,Cole Altman,High Yielder,,,FALSE,,
+TRUE,67,2wd Prostreet,Brent Daniels,Game Changer,,,FALSE,,
+FALSE,45,4wd Modified,Michael Hepler,Third Shift,,,FALSE,,
+TRUE,54,2wd Prostreet,Patrick Martin,Never Satisfied,,,FALSE,,
+TRUE,52,2wd Prostreet,Griffin Campbell,FreeBird,,,FALSE,,
+TRUE,2,2wd Prostreet,Brad Daniels,Radioactive,,,FALSE,,
+TRUE,16,2wd Prostreet,Durham Hammett,Carolina Reaper,,,FALSE,,
+TRUE,32,2wd Prostock,Farris Dyal,Grey Ghost,,,FALSE,,
+TRUE,28,2wd Prostreet,Jed Chambus,Bearly Legal Jr.,,,FALSE,,
+TRUE,72,2wd Modified,Heith Wynn,Bearly Legal,,,FALSE,,
+TRUE,29,2wd Modified,Tanner W. Ogden,Borrowed Parts,,,FALSE,,
+TRUE,58,2wd Prostock,Dell Stephens,Simple Man,,,FALSE,,
+TRUE,11,4wd Prostreet,Randy Jones,Nutn' But Trouble,,,FALSE,,
+TRUE,62,4wd Prostreet,Matthew McGlashan,Bad Luck,,,FALSE,,
+TRUE,3,4wd Prostreet,Matthew McGlashan,Late To Class,,,FALSE,,
+TRUE,12,2wd Nonblown,Misty Mclain,Sheneeda,,,FALSE,,
+TRUE,31,2wd Nonblown,Keith Fields,Resurrection,,,FALSE,,
+TRUE,46,4wd Prostreet,Jason Standard,The Next Break,,,FALSE,,
+TRUE,50,2wd Prostreet,Wilkes Edwards,Uncle Jessie,,,FALSE,,
+TRUE,68,2wd Prostock,Jaxson Edwards,Midnite Express Jr.,,,FALSE,,
+FALSE,40,4wd Prostreet,Randy Waters,Black Knight 2,,,FALSE,,
+TRUE,63,2.6 Prostreet Diesel Truck,Robert Young,BOOYAH!,,,FALSE,,
+TRUE,51,2wd Prostreet,Wesley Mattox,Bennett's Tractor Service,,,FALSE,,
+FALSE,41,2wd Modified,Jaxson Edwards,To Be Determined,,,FALSE,,
+TRUE,53,2wd Prostock,Donald Wilder,Heifer,,,FALSE,,
+FALSE,21,2wd Supermodified,Daniel Johnson,TBD,,,TRUE,,
+TRUE,8,4wd Modified,Daniel Johnson,Desperado,,,FALSE,,
+TRUE,54,4wd Modified,Brian Britt,Animal House,,,,,
+TRUE,40,4wd Modified,Freddy Stallings,Just Lookin,,,FALSE,,
+TRUE,31,2.6 Prostreet Diesel Truck,JW Oliver,The Duke,,,FALSE,,
+FALSE,1,Light Prostock Tractor,J.W. Oliver,John Deere 4440,,,FALSE,,
+FALSE,60,Hot Farm,Will Parish,1066 international,,,FALSE,,
+FALSE,50,Hot Farm,Chad Sayler,Chad sayler,,,FALSE,,
+FALSE,33,Hot Farm,Paul Rivers,Paul Rivers,,,FALSE,,
+FALSE,,Farm Tractor,Cole Elium,Cole Elium,,,,,
+FALSE,61,Hot Farm,Joe Christopher,Joe Christopher,,,FALSE,,
+FALSE,41,Light Prostock Tractor,Joe Christopher, LT Pro Joe,,,FALSE,,
+FALSE,66,Light Prostock Tractor,Chad Sayler,LT Pro Chad,,,FALSE,,
+FALSE,,Farm Tractor,DJ Elium,DJ Elium,,,,,`;
+
+      // Local sample roster so the UI still works if CSV fetch fails (CORS, offline, etc.)
+      const SAMPLE_ROSTER = [
+        { Class: '6200 2WD Local', 'Membership #': '6201', Vehicle: 'Southern Thunder', 'Make / Model': 'Chevy C10', Driver: 'Jake Miller' },
+        { Class: '6200 2WD Local', 'Membership #': '6202', Vehicle: 'Dirt Road Diva', 'Make / Model': 'Ford F-150', Driver: 'Sarah Collins' },
+        { Class: '2WD Prostock', 'Membership #': '7201', Vehicle: 'Haymaker', 'Make / Model': 'Chevy S-10', Driver: 'Cole Altman' },
+        { Class: '2WD Prostock', 'Membership #': '7202', Vehicle: 'Bumper Crop', 'Make / Model': 'Ford F-250', Driver: 'Cody Williams' },
+        { Class: '2WD Prostock', 'Membership #': '7203', Vehicle: 'Saturday Night Special', 'Make / Model': 'Dodge Ram', Driver: 'Justin Bennett' }
+      ];
+
+      let rosterRows = [];
+      let eventLineup = [];
+      let classOrder = []; // Array to store the order of classes for the event
+      let lastSyncTimestamp = null;
+      
+  // ⚠️ SECURITY WARNING: Client-side token management is for demo only
+  // TODO: Replace with server-side API integration
+  // - Token count should be fetched from: GET /api/user/tokens
+  // - Token purchase: POST /api/user/tokens/purchase (integrate payment processor)
+  // - Event creation: POST /api/events (validates & decrements token server-side)
+  let availableTokens = 3; // TEMPORARY - Client-side only
+      let activeEvents = [
+        {
+          name: 'Battle in The Boro',
+          date: '2025-11-11',
+          location: 'Statesboro, GA',
+          organization: 'Southern Pullers Association',
+          status: 'active',
+          // cancellation-related fields (added when canceled)
+          cancelReason: null,
+          cancelNotes: null,
+          refunded: false
+        }
+      ];
+
+      // Sync time tracking functions
+      function updateLastSyncTime() {
+        lastSyncTimestamp = new Date();
+        updateSyncDisplay();
+      }
+
+      function updateSyncDisplay() {
+        const syncElement = document.getElementById('last-sync-time');
+        if (!syncElement) return;
+
+        if (!lastSyncTimestamp) {
+          syncElement.textContent = 'Last sync: Never';
+          return;
+        }
+
+        const now = new Date();
+        const diffMs = now - lastSyncTimestamp;
+        const diffSeconds = Math.floor(diffMs / 1000);
+        const diffMinutes = Math.floor(diffSeconds / 60);
+        const diffHours = Math.floor(diffMinutes / 60);
+        const diffDays = Math.floor(diffHours / 24);
+
+        let timeAgo;
+        if (diffSeconds < 60) {
+          timeAgo = 'Just now';
+        } else if (diffMinutes < 60) {
+          timeAgo = diffMinutes + ' min' + (diffMinutes !== 1 ? 's' : '') + ' ago';
+        } else if (diffHours < 24) {
+          timeAgo = diffHours + ' hour' + (diffHours !== 1 ? 's' : '') + ' ago';
+        } else {
+          timeAgo = diffDays + ' day' + (diffDays !== 1 ? 's' : '') + ' ago';
+        }
+
+        syncElement.textContent = 'Last sync: ' + timeAgo;
+      }
+
+      // Update sync display every 10 seconds
+      setInterval(updateSyncDisplay, 10000);
+
+      // Connection status functions
+      function setConnectionStatus(status) {
+        const statusElement = document.getElementById('connection-status');
+        if (!statusElement) return;
+
+        statusElement.classList.remove('connected', 'offline', 'connecting');
+
+        switch(status) {
+          case 'connected':
+            statusElement.textContent = '✓ Connected';
+            statusElement.classList.add('connected');
+            break;
+          case 'offline':
+            statusElement.textContent = '⚠ Offline Mode';
+            statusElement.classList.add('offline');
+            break;
+          case 'connecting':
+            statusElement.textContent = '⚠ Connecting...';
+            statusElement.classList.add('connecting');
+            break;
+        }
+      }
+
+      function escapeHTML(str) {
+        return String(str || '').replace(/[&<>"']/g, c => {
+          switch (c) {
+            case '&': return '&amp;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '"': return '&quot;';
+            case "'": return '&#39;';
+            default: return c;
+          }
+        });
+      }
+
+      function parseRosterCSV(text) {
+        const lines = text.split(/\r?\n/);
+        if (!lines.length) return [];
+        const headerLine = lines[0].trim();
+        if (!headerLine) return [];
+        const headers = headerLine.split(',').map(h => h.trim());
+        const rows = [];
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+          const cells = line.split(',');
+          const row = {};
+          headers.forEach((h, idx) => {
+            row[h] = (cells[idx] || '').trim();
+          });
+          rows.push(row);
+        }
+        return rows;
+      }
+
+      let currentEditingRowIndex = -1;
+      let currentEditingClassIndex = -1;
+
+      function openEditModal(rowData, classIndex) {
+        // Populate form with current data
+        const membership = rowData['Membership #'] || rowData['Membership'] || rowData['Member #'] || '';
+        const vehicle = rowData['Vehicle'] || rowData['Truck'] || rowData['Truck Name'] || rowData['Vehicle Name'] || '';
+        const makeModel = rowData['Make'] || rowData['Make / Model'] || rowData['Make/Model'] || '';
+        const city = rowData['City'] || rowData['city'] || '';
+        const state = rowData['State'] || rowData['state'] || '';
+        const driver = rowData['Driver'] || rowData['Driver Name'] || '';
+        const additionalDriver = rowData['Additional Driver'] || rowData['additional_driver'] || '';
+        
+        document.getElementById('edit-membership').value = membership;
+        document.getElementById('edit-vehicle').value = vehicle;
+        document.getElementById('edit-makemodel').value = makeModel;
+        document.getElementById('edit-city').value = city;
+        document.getElementById('edit-state').value = state;
+        document.getElementById('edit-driver').value = driver;
+        document.getElementById('edit-additionaldriver').value = additionalDriver;
+        
+        currentEditingRowIndex = -1; // Will be updated when saving
+        const editOverlay = document.getElementById('edit-modal-overlay');
+        if (editOverlay) {
+          editOverlay.classList.add('active');
+        }
+      }
+
+      function closeEditModal() {
+        const editOverlay = document.getElementById('edit-modal-overlay');
+        if (editOverlay) {
+          editOverlay.classList.remove('active');
+        }
+        const editForm = document.getElementById('edit-member-form');
+        if (editForm) {
+          editForm.reset();
+        }
+      }
+
+      function openViewDetailsModal(rowData) {
+        // Populate details view with input fields
+        const membership = rowData['Membership #'] || rowData['Membership'] || rowData['Member #'] || '';
+        const vehicle = rowData['Vehicle'] || rowData['Truck'] || rowData['Truck Name'] || rowData['Vehicle Name'] || '';
+        const makeModel = rowData['Make'] || rowData['Make / Model'] || rowData['Make/Model'] || '';
+        const city = rowData['City'] || rowData['city'] || '';
+        const state = rowData['State'] || rowData['state'] || '';
+        const driver = rowData['Driver'] || rowData['Driver Name'] || '';
+        const additionalDriver = rowData['Additional Driver'] || rowData['additional_driver'] || '';
+
+        document.getElementById('details-membership').value = membership;
+        document.getElementById('details-vehicle').value = vehicle;
+        document.getElementById('details-makemodel').value = makeModel;
+        document.getElementById('details-city').value = city;
+        document.getElementById('details-state').value = state;
+        document.getElementById('details-driver').value = driver;
+        document.getElementById('details-additionaldriver').value = additionalDriver;
+
+        // Set to display mode (read-only)
+        setDetailsDisplayMode();
+
+        const detailsOverlay = document.getElementById('view-details-modal-overlay');
+        if (detailsOverlay) {
+          detailsOverlay.classList.add('active');
+        }
+      }
+
+      function setDetailsDisplayMode() {
+        // Set all fields to read-only display mode
+        const fields = ['details-membership', 'details-vehicle', 'details-makemodel', 'details-city', 'details-state', 'details-driver', 'details-additionaldriver'];
+        fields.forEach(id => {
+          const input = document.getElementById(id);
+          if (input) {
+            input.readOnly = true;
+            input.classList.remove('detail-edit');
+            input.classList.add('detail-display');
+          }
+        });
+        document.getElementById('details-edit-btn').textContent = 'Edit Member';
+      }
+
+      function setDetailsEditMode() {
+        // Set all fields to editable mode
+        const fields = ['details-membership', 'details-vehicle', 'details-makemodel', 'details-city', 'details-state', 'details-driver', 'details-additionaldriver'];
+        fields.forEach(id => {
+          const input = document.getElementById(id);
+          if (input) {
+            input.readOnly = false;
+            input.classList.remove('detail-display');
+            input.classList.add('detail-edit');
+          }
+        });
+        document.getElementById('details-edit-btn').textContent = 'Save Changes';
+      }
+
+      function closeViewDetailsModal() {
+        const detailsOverlay = document.getElementById('view-details-modal-overlay');
+        if (detailsOverlay) {
+          detailsOverlay.classList.remove('active');
+        }
+        setDetailsDisplayMode();
+      }
+
+      // Soft delete function - replaces member with hidden placeholder
+      function softDeleteMember(rowIndex) {
+        if (rowIndex >= 0 && rosterRows[rowIndex]) {
+          const originalClass = rosterRows[rowIndex]['Class'] || rosterRows[rowIndex]['Cass'] || rosterRows[rowIndex]['CLASS'];
+          
+          // Replace with hidden placeholder "Robert Young"
+          rosterRows[rowIndex] = {
+            'Class': originalClass,
+            'Membership #': '0000',
+            'Vehicle': 'Placeholder',
+            'Make': 'Hidden',
+            'City': '',
+            'State': '',
+            'Driver': 'Robert Young',
+            'Additional Driver': '',
+            '_deleted': true, // Flag to identify deleted/placeholder entries
+            '_hidden': true   // Flag to hide from UI
+          };
+        }
+      }
+
+      function renderRosterIntoGrid(grid, rows, opts) {
+        opts = opts || {};
+        if (!rows || !rows.length) {
+          grid.innerHTML = '<div class="card"><div class="card-subtitle">Roster is empty.</div></div>';
+          return;
+        }
+
+        const byClass = {};
+        rows.forEach(r => {
+          const cls = r['Class'] || r['Cass'] || r['CLASS'];
+          if (!cls) return;
+          if (!byClass[cls]) byClass[cls] = [];
+          byClass[cls].push(r);
+        });
+
+        let classNames = Object.keys(byClass);
+        if (opts.filterText) {
+          const ft = String(opts.filterText).toLowerCase();
+          classNames = classNames.filter(name => name.toLowerCase().includes(ft));
+        }
+
+        if (!classNames.length) {
+          grid.innerHTML = '<div class="card"><div class="card-subtitle">No classes match this filter.</div></div>';
+          return;
+        }
+
+        classNames.sort();
+        if (opts.sort === 'desc') {
+          classNames.reverse();
+        }
+
+        if (opts.limit && opts.limit !== 'all' && typeof opts.limit === 'number') {
+          classNames = classNames.slice(0, opts.limit);
+        }
+
+        grid.innerHTML = '';
+
+        classNames.forEach(cls => {
+          const entries = byClass[cls];
+          // Filter out hidden/deleted entries for display
+          const visibleEntries = entries.filter(e => !e._hidden);
+          
+          // Skip this class if no visible entries
+          if (visibleEntries.length === 0) return;
+          
+          const card = document.createElement('div');
+          card.className = 'card';
+
+          let html = '';
+          html += '<div class="card-header"><div>';
+          html += '<div class="card-title">' + escapeHTML(cls) + '</div>';
+          html += '<div class="card-subtitle">SPA roster · ' + visibleEntries.length + ' entries</div>';
+          html += '</div></div>';
+          html += '<table><thead><tr>';
+          html += '<th>Membership #</th><th>Vehicle</th><th>Make / Model</th><th>Driver</th>';
+          html += '</tr></thead><tbody>';
+
+          visibleEntries.forEach(e => {
+            const mem = e['Membership #'] || e['Membership'] || e['Member #'] || e['Member'] || '';
+            const vehicle = e['Vehicle'] || e['Truck'] || e['Truck Name'] || e['Vehicle Name'] || '';
+            const makeModel = e['Make'] || e['Make / Model'] || e['Make/Model'] || e['Model'] || '';
+            const driver = e['Driver'] || e['Driver Name'] || '';
+
+            html += '<tr data-row-data="' + escapeHTML(JSON.stringify(e)) + '">';
+            html += '<td>' + escapeHTML(mem) + '</td>';
+            html += '<td>' + escapeHTML(vehicle) + '</td>';
+            html += '<td>' + escapeHTML(makeModel) + '</td>';
+            html += '<td>' + escapeHTML(driver) + '</td>';
+            html += '</tr>';
+          });
+
+          html += '</tbody></table>';
+          card.innerHTML = html;
+          grid.appendChild(card);
+
+          // Add click handlers to rows
+          const rows = card.querySelectorAll('tbody tr');
+          rows.forEach((row, idx) => {
+            row.addEventListener('click', () => {
+              const rowDataStr = row.dataset.rowData;
+              if (rowDataStr) {
+                try {
+                  const rowData = JSON.parse(rowDataStr);
+                  currentEditingRowIndex = rosterRows.indexOf(rowData);
+                  openViewDetailsModal(rowData);
+                } catch (e) {
+                  console.error('Error parsing row data:', e);
+                }
+              }
+            });
+          });
+        });
+      }
+
+      function buildRosterSuggestions() {
+        // This function is kept for backward compatibility
+        // It now also builds lineup roster suggestions
+        buildLineupRosterSuggestions();
+      }
+
+      function renderEventLineup() {
+        const container = document.getElementById('lineup-grid');
+        if (!container) return;
+
+        if (!eventLineup || !eventLineup.length) {
+          container.innerHTML = '<div class="card"><div class="card-header"><div>' +
+            '<div class="card-title">Event lineup</div>' +
+            '<div class="card-subtitle">No entries added yet. Use the form above to build tonight\'s draws.</div>' +
+            '</div></div></div>';
+          return;
+        }
+
+        const byClass = {};
+        eventLineup.forEach(e => {
+          const cls = e.Class || 'Unassigned class';
+          if (!byClass[cls]) byClass[cls] = [];
+          byClass[cls].push(e);
+        });
+
+        const classNames = Object.keys(byClass).sort();
+        container.innerHTML = '';
+
+        classNames.forEach(cls => {
+          const entries = byClass[cls].slice().sort((a, b) => {
+            const da = parseFloat(a.draw || '0') || 0;
+            const db = parseFloat(b.draw || '0') || 0;
+            return da - db;
+          });
+
+          const card = document.createElement('div');
+          card.className = 'card';
+          let html = '';
+          html += '<div class="card-header"><div>';
+          html += '<div class="card-title">' + escapeHTML(cls) + '</div>';
+          html += '<div class="card-subtitle">Event lineup · ' + entries.length + ' draws</div>';
+          html += '</div></div>';
+          html += '<table><thead><tr>';
+          html += '<th>Draw #</th><th>Truck</th><th>Driver</th><th>SPA</th>';
+          html += '</tr></thead><tbody>';
+
+          entries.forEach(e => {
+            const spaText = e.spaMember ? 'Yes' : 'No';
+            html += '<tr data-lineup-data="' + escapeHTML(JSON.stringify(e)) + '">';
+            html += '<td>' + escapeHTML(String(e.draw || '')) + '</td>';
+            html += '<td>' + escapeHTML(e.Truck || '') + '</td>';
+            html += '<td>' + escapeHTML(e.Driver || '') + '</td>';
+            html += '<td>' + spaText + '</td>';
+            html += '</tr>';
+          });
+
+          html += '</tbody></table>';
+          card.innerHTML = html;
+          container.appendChild(card);
+
+          // Add click handlers to rows
+          const rows = card.querySelectorAll('tbody tr');
+          rows.forEach(row => {
+            row.addEventListener('click', () => {
+              const lineupDataStr = row.dataset.lineupData;
+              if (lineupDataStr) {
+                try {
+                  const lineupData = JSON.parse(lineupDataStr);
+                  openLineupEditModal(lineupData);
+                } catch (e) {
+                  console.error('Error parsing lineup data:', e);
+                }
+              }
+            });
+          });
+        });
+      }
+
+      function renderResults() {
+        const container = document.getElementById('results-grid');
+        if (!container) return;
+
+        if (!eventLineup || !eventLineup.length) {
+          container.innerHTML = '<div class="card"><div class="card-body" style="padding: 40px; text-align: center; color: rgba(249,250,251,0.5);">' +
+            '<p style="font-size: 18px; margin-bottom: 12px;">📊 No Results Yet</p>' +
+            '<p>Results will appear here once the event data is loaded</p>' +
+            '</div></div>';
+          return;
+        }
+
+        // Group by class
+        const byClass = {};
+        eventLineup.forEach(e => {
+          const cls = e.Class || 'Unassigned class';
+          if (!byClass[cls]) byClass[cls] = [];
+          byClass[cls].push(e);
+        });
+
+        // Sort classes based on classOrder, then alphabetically
+        const classNames = Object.keys(byClass).sort((a, b) => {
+          const aIndex = classOrder.indexOf(a);
+          const bIndex = classOrder.indexOf(b);
+          if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+          if (aIndex !== -1) return -1;
+          if (bIndex !== -1) return 1;
+          return a.localeCompare(b);
+        });
+
+        container.innerHTML = '';
+
+        classNames.forEach(cls => {
+          const entries = byClass[cls].slice().sort((a, b) => {
+            // Sort by Place (numeric, empty at end)
+            const placeA = a.Place ? parseInt(a.Place) : 9999;
+            const placeB = b.Place ? parseInt(b.Place) : 9999;
+            if (placeA !== placeB) return placeA - placeB;
+            // Then by distance (descending - longer is better)
+            const distA = parseFloat(a.Distance) || 0;
+            const distB = parseFloat(b.Distance) || 0;
+            return distB - distA;
+          });
+
+          const card = document.createElement('div');
+          card.className = 'card';
+          let html = '';
+          html += '<div class="card-header"><div>';
+          html += '<div class="card-title">' + escapeHTML(cls) + '</div>';
+          html += '<div class="card-subtitle">Final Results · ' + entries.length + ' entries</div>';
+          html += '</div></div>';
+          html += '<table><thead><tr>';
+          html += '<th style="width: 60px;">Place</th>';
+          html += '<th style="width: 80px;">Draw #</th>';
+          html += '<th>Truck</th>';
+          html += '<th>Driver</th>';
+          html += '<th style="width: 100px;">Distance</th>';
+          html += '<th style="width: 90px;">Speed</th>';
+          html += '<th style="width: 60px;">DQ</th>';
+          html += '<th style="width: 70px;">Points</th>';
+          html += '</tr></thead><tbody>';
+
+          entries.forEach(e => {
+            const isDQ = e.DQ === true || e.DQ === 'TRUE' || e.DQ === 'true';
+            const rowStyle = isDQ ? ' style="background: rgba(239, 68, 68, 0.1);"' : '';
+            const placeDisplay = e.Place ? e.Place : '-';
+            const distanceDisplay = e.Distance ? e.Distance + '"' : '-';
+            const speedDisplay = e.Speed ? e.Speed + ' mph' : '-';
+            const dqDisplay = isDQ ? '<span style="color: #ef4444; font-weight: 600;">DQ</span>' : '-';
+            const pointsDisplay = e.Points ? e.Points : '-';
+            
+            html += '<tr' + rowStyle + '>';
+            html += '<td style="font-weight: 700; font-size: 1.1rem;">' + escapeHTML(placeDisplay) + '</td>';
+            html += '<td>' + escapeHTML(String(e.draw || '-')) + '</td>';
+            html += '<td style="font-weight: 600;">' + escapeHTML(e.Truck || '-') + '</td>';
+            html += '<td>' + escapeHTML(e.Driver || '-') + '</td>';
+            html += '<td style="font-weight: 600; color: var(--primary);">' + distanceDisplay + '</td>';
+            html += '<td>' + speedDisplay + '</td>';
+            html += '<td>' + dqDisplay + '</td>';
+            html += '<td style="font-weight: 700; color: #8b5cf6;">' + pointsDisplay + '</td>';
+            html += '</tr>';
+          });
+
+          html += '</tbody></table>';
+          card.innerHTML = html;
+          container.appendChild(card);
+        });
+      }
+
+      function loadRosterFromCSV() {
+        const grid = document.getElementById('roster-grid');
+        setConnectionStatus('connecting');
+
+        fetch(SPA_ROSTER_CSV_URL)
+          .then(resp => resp.text())
+          .then(text => {
+            const rows = parseRosterCSV(text);
+            if (!rows.length) {
+              rosterRows = SAMPLE_ROSTER.slice();
+            } else {
+              rosterRows = rows;
+            }
+            if (grid) {
+              renderRosterIntoGrid(grid, rosterRows);
+            }
+            buildRosterSuggestions();
+            updateLastSyncTime(); // Record sync time
+            setConnectionStatus('connected'); // Set connected status
+          })
+          .catch(err => {
+            console.warn('Error loading SPA roster CSV, using sample roster instead:', err);
+            rosterRows = SAMPLE_ROSTER.slice();
+            if (grid) {
+              renderRosterIntoGrid(grid, rosterRows);
+            }
+            buildRosterSuggestions();
+            updateLastSyncTime(); // Record sync time even on fallback
+            setConnectionStatus('offline'); // Set offline status
+          });
+      }
+
+      function loadLineupFromCSV() {
+        console.log('Loading lineup from CSV...');
+        fetch(JESUP_LINEUP_CSV_URL)
+          .then(resp => {
+            console.log('Lineup CSV fetch response:', resp.status);
+            return resp.text();
+          })
+          .then(text => {
+            console.log('Lineup CSV text length:', text.length);
+            const rows = parseRosterCSV(text); // reuse parser - same CSV format
+            console.log('Parsed lineup rows:', rows.length);
+            if (rows && rows.length) {
+              // Map CSV columns to lineup format
+              eventLineup = rows.map(row => ({
+                draw: row['Line #'] || '',
+                Class: row['Class'] || '',
+                Truck: row['Truck'] || '',
+                Driver: row['Driver'] || '',
+                spaMember: row['SPA Member'] === 'TRUE',
+                Distance: row['Distance'] || '',
+                Speed: row['Speed'] || '',
+                DQ: row['DQ'] === 'TRUE',
+                Place: row['Place'] || '',
+                Points: row['Points'] || ''
+              }));
+              
+              console.log('Mapped eventLineup:', eventLineup.length, 'entries');
+              console.log('First entry:', eventLineup[0]);
+              
+              // Track used draw numbers
+              usedDrawNumbers.clear();
+              eventLineup.forEach(e => {
+                const drawNum = parseInt(e.draw);
+                if (!isNaN(drawNum) && drawNum > 0) {
+                  usedDrawNumbers.add(drawNum);
+                }
+              });
+              
+              console.log('Used draw numbers:', Array.from(usedDrawNumbers));
+              renderEventLineup();
+              renderResults();
+              
+              // Auto-populate class order from lineup
+              updateClassOrderFromLineup();
+            } else {
+              console.warn('No rows parsed from lineup CSV');
+            }
+          })
+          .catch(err => {
+            console.warn('Error loading lineup CSV (likely CORS), using embedded fallback data:', err.message);
+            // Use fallback data
+            const rows = parseRosterCSV(JESUP_LINEUP_CSV_DATA);
+            console.log('Parsed fallback lineup rows:', rows.length);
+            if (rows && rows.length) {
+              eventLineup = rows.map(row => ({
+                draw: row['Line #'] || '',
+                Class: row['Class'] || '',
+                Truck: row['Truck'] || '',
+                Driver: row['Driver'] || '',
+                spaMember: row['SPA Member'] === 'TRUE',
+                Distance: row['Distance'] || '',
+                Speed: row['Speed'] || '',
+                DQ: row['DQ'] === 'TRUE',
+                Place: row['Place'] || '',
+                Points: row['Points'] || ''
+              }));
+              
+              // Track used draw numbers
+              usedDrawNumbers.clear();
+              eventLineup.forEach(e => {
+                const drawNum = parseInt(e.draw);
+                if (!isNaN(drawNum) && drawNum > 0) {
+                  usedDrawNumbers.add(drawNum);
+                }
+              });
+              
+              console.log('Loaded', eventLineup.length, 'entries from fallback');
+              
+              // Auto-populate class order from lineup
+              updateClassOrderFromLineup();
+            }
+            renderEventLineup();
+            renderResults();
+          });
+      }
+
+      const SAMPLE_EVENT_LINEUP = [
+        { 'SPA Member': 'TRUE', 'Line #': '15', Class: '2wd Modified', Driver: 'Trevor Beasley', Truck: 'Kuntry Boyz Toy', Distance: '308.37', Speed: '26.2', DQ: 'FALSE', Place: '4', Points: '7' },
+        { 'SPA Member': 'TRUE', 'Line #': '5', Class: '2wd Modified', Driver: 'Johnny Brown', Truck: 'Hog Wild', Distance: '311.33', Speed: '27.5', DQ: 'FALSE', Place: '3', Points: '8' },
+        { 'SPA Member': 'TRUE', 'Line #': '56', Class: '2wd Modified', Driver: 'Johnny Brown', Truck: 'Wild Hog', Distance: '317.64', Speed: '27.2', DQ: 'FALSE', Place: '2', Points: '9' },
+        { 'SPA Member': 'FALSE', 'Line #': '57', Class: '2wd Modified', Driver: 'Clayton Blocker', Truck: 'Wild Thang', Distance: '289.14', Speed: '23.3', DQ: 'FALSE', Place: '7', Points: '' },
+        { 'SPA Member': 'TRUE', 'Line #': '72', Class: '2wd Modified', Driver: 'Heith Wynn', Truck: 'Bearly Legal', Distance: '318.06', Speed: '27.6', DQ: 'FALSE', Place: '1', Points: '10' },
+        { 'SPA Member': 'TRUE', 'Line #': '29', Class: '2wd Modified', Driver: 'Tanner W. Ogden', Truck: 'Borrowed Parts', Distance: '296.44', Speed: '22.9', DQ: 'FALSE', Place: '5', Points: '6' },
+        { 'SPA Member': 'FALSE', 'Line #': '41', Class: '2wd Modified', Driver: 'Jaxson Edwards', Truck: 'To Be Determined', Distance: '290.09', Speed: '23.4', DQ: 'FALSE', Place: '6', Points: '' },
+
+        { 'SPA Member': 'TRUE', 'Line #': '10', Class: '4wd Prostock', Driver: 'Carson Blocker', Truck: 'Mean Green', Distance: '309.29', Speed: '27.8', DQ: 'FALSE', Place: '2', Points: '10' },
+        { 'SPA Member': 'FALSE', 'Line #': '20', Class: '4wd Prostock', Driver: 'Al Durrence', Truck: 'Mr. Sparkle', Distance: '324.51', Speed: '29.9', DQ: 'FALSE', Place: '1', Points: '' },
+
+        { 'SPA Member': 'TRUE', 'Line #': '26', Class: '2wd Supermodified', Driver: 'Justin Bennett', Truck: 'Lawless', Distance: '330.59', Speed: '33.6', DQ: 'FALSE', Place: '1', Points: '10' },
+        { 'SPA Member': 'TRUE', 'Line #': '30', Class: '2wd Supermodified', Driver: 'Carter Stewart', Truck: 'Saturday Night Special', Distance: '327.10', Speed: '31.3', DQ: 'FALSE', Place: '2', Points: '9' },
+        { 'SPA Member': 'TRUE', 'Line #': '25', Class: '2wd Supermodified', Driver: 'Cole Altman', Truck: 'Bumper Crop', Distance: '316.02', Speed: '32.0', DQ: 'FALSE', Place: '3', Points: '8' },
+        { 'SPA Member': 'TRUE', 'Line #': '60', Class: '2wd Supermodified', Driver: 'Cole Altman', Truck: 'High Yielder', Distance: '310.84', Speed: '30.1', DQ: 'FALSE', Place: '4', Points: '7' },
+        { 'SPA Member': 'FALSE', 'Line #': '21', Class: '2wd Supermodified', Driver: 'Daniel Johnson', Truck: 'TBD', Distance: '253.40', Speed: '32.6', DQ: 'TRUE', Place: '5', Points: '' },
+
+        { 'SPA Member': 'TRUE', 'Line #': '67', Class: '2wd Prostreet', Driver: 'Brent Daniels', Truck: 'Game Changer', Distance: '315.24', Speed: '23.0', DQ: 'FALSE', Place: '1', Points: '10' },
+        { 'SPA Member': 'TRUE', 'Line #': '54', Class: '2wd Prostreet', Driver: 'Patrick Martin', Truck: "Never Satisfied", Distance: '311.53', Speed: '21.9', DQ: 'FALSE', Place: '3', Points: '8' },
+        { 'SPA Member': 'TRUE', 'Line #': '52', Class: '2wd Prostreet', Driver: 'Griffin Campbell', Truck: 'FreeBird', Distance: '291.93', Speed: '18.5', DQ: 'FALSE', Place: '6', Points: '5' },
+        { 'SPA Member': 'TRUE', 'Line #': '2', Class: '2wd Prostreet', Driver: 'Brad Daniels', Truck: 'Radioactive', Distance: '310.11', Speed: '22.5', DQ: 'FALSE', Place: '4', Points: '7' },
+        { 'SPA Member': 'TRUE', 'Line #': '16', Class: '2wd Prostreet', Driver: 'Durham Hammett', Truck: 'Carolina Reaper', Distance: '309.42', Speed: '21.9', DQ: 'FALSE', Place: '5', Points: '6' },
+        { 'SPA Member': 'TRUE', 'Line #': '28', Class: '2wd Prostreet', Driver: 'Jed Chambus', Truck: 'Bearly Legal Jr.', Distance: '313.05', Speed: '21.8', DQ: 'FALSE', Place: '2', Points: '9' },
+        { 'SPA Member': 'TRUE', 'Line #': '50', Class: '2wd Prostreet', Driver: 'Wilkes Edwards', Truck: 'Uncle Jessie', Distance: '285.68', Speed: '16.2', DQ: 'FALSE', Place: '7', Points: '4' },
+        { 'SPA Member': 'TRUE', 'Line #': '51', Class: '2wd Prostreet', Driver: 'Wesley Mattox', Truck: "Bennett's Tractor Service", Distance: '126.34', Speed: '13.9', DQ: 'FALSE', Place: '8', Points: '3' },
+
+        { 'SPA Member': 'FALSE', 'Line #': '45', Class: '4wd Modified', Driver: 'Michael Hepler', Truck: 'Third Shift', Distance: '301.47', Speed: '28.6', DQ: 'FALSE', Place: '4', Points: '' },
+        { 'SPA Member': 'TRUE', 'Line #': '8', Class: '4wd Modified', Driver: 'Daniel Johnson', Truck: 'Desperado', Distance: '308.77', Speed: '30.0', DQ: 'FALSE', Place: '2', Points: '9' },
+        { 'SPA Member': 'TRUE', 'Line #': '54', Class: '4wd Modified', Driver: 'Brian Britt', Truck: 'Animal House', Distance: '313.15', Speed: '29.4', DQ: '', Place: '1', Points: '10' },
+        { 'SPA Member': 'TRUE', 'Line #': '40', Class: '4wd Modified', Driver: 'Freddy Stallings', Truck: 'Just Lookin', Distance: '302.64', Speed: '28.3', DQ: 'FALSE', Place: '3', Points: '8' }
+      ];
+
+      function buildLineupFromEvent() {
+        const container = document.getElementById('lineup-grid');
+        if (!container) return;
+
+        if (!SAMPLE_EVENT_LINEUP.length) {
+          container.innerHTML = '<div class="card"><div class="card-subtitle">No event lineup loaded.</div></div>';
+          return;
+        }
+
+        const byClass = {};
+        SAMPLE_EVENT_LINEUP.forEach(r => {
+          const cls = r.Class || r['Class'];
+          if (!cls) return;
+          if (!byClass[cls]) byClass[cls] = [];
+          byClass[cls].push(r);
+        });
+
+        const classNames = Object.keys(byClass).sort();
+        if (!classNames.length) {
+          container.innerHTML = '<div class="card"><div class="card-subtitle">No classes found in event lineup.</div></div>';
+          return;
+        }
+
+        container.innerHTML = '';
+
+        classNames.forEach(cls => {
+          const entries = byClass[cls].slice().sort((a, b) => {
+            const la = parseFloat(a['Line #'] || '0') || 0;
+            const lb = parseFloat(b['Line #'] || '0') || 0;
+            return la - lb;
+          });
+
+          const card = document.createElement('div');
+          card.className = 'card';
+
+          let html = '';
+          html += '<div class="card-header"><div>';
+          html += '<div class="card-title">' + escapeHTML(cls) + '</div>';
+          html += '<div class="card-subtitle">Jesup Friday · ' + entries.length + ' hooks</div>';
+          html += '</div></div>';
+          html += '<table><thead><tr>';
+          html += '<th>Hook #</th><th>Line #</th><th>Truck</th><th>Driver</th><th>SPA</th>';
+          html += '</tr></thead><tbody>';
+
+          entries.forEach((e, idx) => {
+            const hookNum = idx + 1;
+            const lineNum = e['Line #'] || '';
+            const truck = e.Truck || '';
+            const driver = e.Driver || '';
+            const spa = e['SPA Member'] === 'TRUE' ? 'Yes' : (e['SPA Member'] === 'FALSE' ? 'No' : '');
+            html += '<tr>';
+            html += '<td>' + hookNum + '</td>';
+            html += '<td>' + escapeHTML(lineNum) + '</td>';
+            html += '<td>' + escapeHTML(truck) + '</td>';
+            html += '<td>' + escapeHTML(driver) + '</td>';
+            html += '<td>' + spa + '</td>';
+            html += '</tr>';
+          });
+
+          html += '</tbody></table>';
+          card.innerHTML = html;
+          container.appendChild(card);
+        });
+      }
+
+      // == Lineup Functions ==
+      
+      let selectedRosterRowForLineup = null;
+      let usedDrawNumbers = new Set(); // Track used draw numbers globally
+
+      function buildLineupRosterSuggestions() {
+        const datalist = document.getElementById('lineup-roster-options-inline');
+        if (!datalist) return;
+        datalist.innerHTML = '';
+        if (!rosterRows || !rosterRows.length) return;
+
+        rosterRows.forEach((row, idx) => {
+          // Skip hidden/deleted entries
+          if (row._hidden) return;
+          
+          const cls = row['Class'] || row['Cass'] || row['CLASS'] || '';
+          const vehicle = row['Vehicle'] || row['Truck'] || row['Truck Name'] || row['Vehicle Name'] || '';
+          const driver = row['Driver'] || row['Driver Name'] || '';
+          if (!vehicle && !driver) return;
+          const label = (vehicle || '(no vehicle)') + ' · ' + (driver || 'Unknown') + (cls ? ' (' + cls + ')' : '');
+          const opt = document.createElement('option');
+          opt.value = label;
+          opt.dataset.rowIndex = String(idx);
+          datalist.appendChild(opt);
+        });
+      }
+
+      function applyRosterSelectionFromSearchInline() {
+        const searchInput = document.getElementById('lineup-roster-search-inline');
+        const datalist = document.getElementById('lineup-roster-options-inline');
+        if (!searchInput || !datalist) return;
+
+        const selectedValue = searchInput.value.trim();
+        if (!selectedValue) return;
+
+        // Find matching option
+        const options = datalist.querySelectorAll('option');
+        let matchedOption = null;
+        options.forEach(opt => {
+          if (opt.value === selectedValue) {
+            matchedOption = opt;
+          }
+        });
+
+        if (!matchedOption || !matchedOption.dataset.rowIndex) {
+          selectedRosterRowForLineup = null;
+          return;
+        }
+
+        const rowIndex = parseInt(matchedOption.dataset.rowIndex);
+        if (isNaN(rowIndex) || rowIndex < 0 || rowIndex >= rosterRows.length) {
+          selectedRosterRowForLineup = null;
+          return;
+        }
+
+        selectedRosterRowForLineup = rosterRows[rowIndex];
+
+        // Auto-fill fields
+        const cls = selectedRosterRowForLineup['Class'] || selectedRosterRowForLineup['Cass'] || selectedRosterRowForLineup['CLASS'] || '';
+        const vehicle = selectedRosterRowForLineup['Vehicle'] || selectedRosterRowForLineup['Truck'] || selectedRosterRowForLineup['Truck Name'] || selectedRosterRowForLineup['Vehicle Name'] || '';
+        const driver = selectedRosterRowForLineup['Driver'] || selectedRosterRowForLineup['Driver Name'] || '';
+
+        document.getElementById('lineup-class-display-inline').value = cls;
+        document.getElementById('lineup-truck-display-inline').value = vehicle;
+        document.getElementById('lineup-driver-display-inline').value = driver;
+      }
+
+      function getRandomUnusedDrawNumber() {
+        // Get all numbers from 1-100 that haven't been used
+        const availableNumbers = [];
+        for (let i = 1; i <= 100; i++) {
+          if (!usedDrawNumbers.has(i)) {
+            availableNumbers.push(i);
+          }
+        }
+
+        if (availableNumbers.length === 0) {
+          alert('All draw numbers (1-100) have been used!');
+          return null;
+        }
+
+        // Pick random number from available
+        const randomIndex = Math.floor(Math.random() * availableNumbers.length);
+        return availableNumbers[randomIndex];
+      }
+
+      function validateAndAddToLineupInline() {
+        const drawInput = document.getElementById('lineup-draw-number-inline');
+        const drawNumber = parseInt(drawInput.value);
+
+        if (!drawNumber || drawNumber < 1) {
+          alert('Please enter a valid draw number (1 or greater).');
+          return;
+        }
+
+        if (!selectedRosterRowForLineup) {
+          alert('Please select a vehicle/driver from the roster search.');
+          return;
+        }
+
+        const cls = selectedRosterRowForLineup['Class'] || selectedRosterRowForLineup['Cass'] || selectedRosterRowForLineup['CLASS'] || '';
+
+        // Check for duplicate draw number globally
+        if (usedDrawNumbers.has(drawNumber)) {
+          alert('Draw #' + drawNumber + ' has already been used. Please choose a different draw number or use Random Draw.');
+          return;
+        }
+
+        // Add to lineup
+        const newEntry = {
+          draw: drawNumber,
+          Class: cls,
+          Truck: selectedRosterRowForLineup['Vehicle'] || selectedRosterRowForLineup['Truck'] || selectedRosterRowForLineup['Truck Name'] || selectedRosterRowForLineup['Vehicle Name'] || '',
+          Driver: selectedRosterRowForLineup['Driver'] || selectedRosterRowForLineup['Driver Name'] || '',
+          spaMember: true // Assuming from roster means SPA member
+        };
+
+        eventLineup.push(newEntry);
+        usedDrawNumbers.add(drawNumber);
+        
+        // Clear form for next entry
+        document.getElementById('lineup-roster-search-inline').value = '';
+        document.getElementById('lineup-draw-number-inline').value = '';
+        document.getElementById('lineup-class-display-inline').value = '';
+        document.getElementById('lineup-truck-display-inline').value = '';
+        document.getElementById('lineup-driver-display-inline').value = '';
+        selectedRosterRowForLineup = null;
+        
+        renderEventLineup();
+        updateClassOrderFromLineup();
+      }
+
+      // Lineup edit/delete functions
+      let currentEditingLineupEntry = null;
+
+      function openLineupEditModal(lineupEntry) {
+        currentEditingLineupEntry = lineupEntry;
+        const modal = document.getElementById('edit-lineup-modal-overlay');
+        if (!modal) return;
+
+        document.getElementById('edit-lineup-draw').value = lineupEntry.draw || '';
+        document.getElementById('edit-lineup-class').value = lineupEntry.Class || '';
+        document.getElementById('edit-lineup-truck').value = lineupEntry.Truck || '';
+        document.getElementById('edit-lineup-driver').value = lineupEntry.Driver || '';
+
+        modal.classList.add('active');
+      }
+
+      function closeLineupEditModal() {
+        const modal = document.getElementById('edit-lineup-modal-overlay');
+        if (modal) modal.classList.remove('active');
+        currentEditingLineupEntry = null;
+      }
+
+      function saveLineupEdit() {
+        if (!currentEditingLineupEntry) return;
+
+        const newDrawNumber = parseInt(document.getElementById('edit-lineup-draw').value);
+        
+        if (!newDrawNumber || newDrawNumber < 1) {
+          alert('Please enter a valid draw number (1 or greater).');
+          return;
+        }
+
+        const oldDrawNumber = currentEditingLineupEntry.draw;
+
+        // Check if new draw number is already used (but allow keeping the same number)
+        if (newDrawNumber !== oldDrawNumber && usedDrawNumbers.has(newDrawNumber)) {
+          alert('Draw #' + newDrawNumber + ' is already in use. Please choose a different draw number.');
+          return;
+        }
+
+        // Find entry by matching properties
+        const index = eventLineup.findIndex(e => 
+          e.draw === currentEditingLineupEntry.draw && 
+          e.Driver === currentEditingLineupEntry.Driver &&
+          e.Class === currentEditingLineupEntry.Class
+        );
+        
+        if (index !== -1) {
+          // Update used draw numbers
+          usedDrawNumbers.delete(oldDrawNumber);
+          usedDrawNumbers.add(newDrawNumber);
+
+          // Update the entry
+          eventLineup[index].draw = newDrawNumber;
+        }
+
+        closeLineupEditModal();
+        renderEventLineup();
+        updateClassOrderFromLineup();
+      }
+
+      function deleteLineupEntry() {
+        if (!currentEditingLineupEntry) return;
+
+        const confirmMsg = 'Remove ' + currentEditingLineupEntry.Driver + ' (Draw #' + currentEditingLineupEntry.draw + ') from the lineup?';
+        if (!confirm(confirmMsg)) return;
+
+        // Find entry by matching properties (draw number and driver)
+        const index = eventLineup.findIndex(e => 
+          e.draw === currentEditingLineupEntry.draw && 
+          e.Driver === currentEditingLineupEntry.Driver &&
+          e.Class === currentEditingLineupEntry.Class
+        );
+        
+        if (index !== -1) {
+          // Remove from used draw numbers
+          usedDrawNumbers.delete(currentEditingLineupEntry.draw);
+          // Remove from lineup
+          eventLineup.splice(index, 1);
+        }
+
+        closeLineupEditModal();
+        renderEventLineup();
+        updateClassOrderFromLineup();
+      }
+
+      // == Class Order Functions ==
+      
+      function updateClassOrderFromLineup() {
+        // Get all classes that have trucks with valid draw numbers
+        const classesInLineup = new Set();
+        eventLineup.forEach(entry => {
+          const drawNum = parseInt(entry.draw);
+          if (entry.Class && !isNaN(drawNum) && drawNum > 0) {
+            classesInLineup.add(entry.Class);
+          }
+        });
+        
+        // Remove classes from classOrder that are no longer in the lineup
+        classOrder = classOrder.filter(className => classesInLineup.has(className));
+        
+        // Add new classes that are in the lineup but not in classOrder
+        classesInLineup.forEach(className => {
+          if (!classOrder.includes(className)) {
+            classOrder.push(className);
+          }
+        });
+        
+        // Update statistics
+        updateLineupStatistics();
+        
+        renderClassOrder();
+        
+        // Update live event display if available
+        if (typeof renderClassPills === 'function') {
+          renderClassPills();
+        }
+      }
+      
+      function updateLineupStatistics() {
+        // Count trucks with valid draw numbers
+        const trucksCount = eventLineup.filter(entry => {
+          const drawNum = parseInt(entry.draw);
+          return !isNaN(drawNum) && drawNum > 0;
+        }).length;
+        
+        // Count unique classes with valid draw numbers
+        const classesSet = new Set();
+        eventLineup.forEach(entry => {
+          const drawNum = parseInt(entry.draw);
+          if (entry.Class && !isNaN(drawNum) && drawNum > 0) {
+            classesSet.add(entry.Class);
+          }
+        });
+        
+        const peopleCountEl = document.getElementById('lineup-people-count');
+        const classesCountEl = document.getElementById('lineup-classes-count');
+        
+        if (peopleCountEl) peopleCountEl.textContent = trucksCount;
+        if (classesCountEl) classesCountEl.textContent = classesSet.size;
+      }
+      
+      function renderClassOrder() {
+        const container = document.getElementById('class-order-list');
+        if (!container) return;
+
+        if (!classOrder || !classOrder.length) {
+          container.innerHTML = '<div style="padding: 8px; color: rgba(249,250,251,0.5); font-size: 0.8rem;">No classes yet. Add trucks to the lineup to populate.</div>';
+          return;
+        }
+
+        container.innerHTML = '';
+        classOrder.forEach((className, index) => {
+          const chip = document.createElement('div');
+          chip.draggable = true;
+          chip.dataset.index = index;
+          chip.style.cssText = 'display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; background: rgba(15,23,42,0.7); border-radius: 20px; border: 1px solid rgba(55,65,81,0.9); font-size: 0.8rem; cursor: move; transition: all 0.2s ease;';
+          
+          chip.innerHTML = `
+            <span style="min-width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; background: var(--primary); color: #fff; border-radius: 50%; font-weight: 600; font-size: 0.7rem;">${index + 1}</span>
+            <span style="font-weight: 500; white-space: nowrap;">${escapeHTML(className)}</span>
+            <button type="button" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold;" data-remove="${index}" title="Remove">×</button>
+          `;
+          
+          // Drag and drop events
+          chip.addEventListener('dragstart', (e) => {
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', index);
+            chip.style.opacity = '0.5';
+          });
+          
+          chip.addEventListener('dragend', (e) => {
+            chip.style.opacity = '1';
+          });
+          
+          chip.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            chip.style.transform = 'scale(1.05)';
+            chip.style.background = 'rgba(76,29,149,0.3)';
+          });
+          
+          chip.addEventListener('dragleave', (e) => {
+            chip.style.transform = 'scale(1)';
+            chip.style.background = 'rgba(15,23,42,0.7)';
+          });
+          
+          chip.addEventListener('drop', (e) => {
+            e.preventDefault();
+            chip.style.transform = 'scale(1)';
+            chip.style.background = 'rgba(15,23,42,0.7)';
+            
+            const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+            const toIndex = parseInt(chip.dataset.index);
+            
+            if (fromIndex !== toIndex) {
+              // Remove item from original position
+              const [movedItem] = classOrder.splice(fromIndex, 1);
+              // Insert at new position
+              classOrder.splice(toIndex, 0, movedItem);
+              renderClassOrder();
+            }
+          });
+          
+          container.appendChild(chip);
+        });
+
+        // Add event listeners for remove buttons
+        container.querySelectorAll('[data-remove]').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent drag from starting
+            const index = parseInt(btn.dataset.remove);
+            classOrder.splice(index, 1);
+            renderClassOrder();
+          });
+        });
+      }
+
+      // == Live Event Functions ==
+      
+      let currentLiveClass = '';
+      let currentLiveIndex = 0;
+      let liveClassEntries = [];
+      let lastHookTimestamp = null;
+      let hookTimestamps = [];
+      
+      function initLiveEvent() {
+        renderClassPills();
+        renderLineupRail();
+        updateLiveStatus();
+        updateLeaderboardTable();
+      }
+      
+      function renderClassPills() {
+        const container = document.getElementById('live-class-pills');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
+        if (!classOrder.length) {
+          container.innerHTML = '<div style="color: rgba(249,250,251,0.5); font-size: 0.85rem;">No classes in lineup</div>';
+          return;
+        }
+        
+        classOrder.forEach((className, index) => {
+          const isComplete = isClassComplete(className);
+          const isCurrent = className === currentLiveClass;
+          
+          const pill = document.createElement('div');
+          pill.className = 'class-pill';
+          if (isComplete) pill.classList.add('completed');
+          if (isCurrent) pill.classList.add('active');
+          
+          pill.innerHTML = `<span class="dot"></span><span>${escapeHTML(className)}</span>`;
+          pill.style.cursor = 'pointer';
+          
+          pill.addEventListener('click', () => {
+            startLiveClass(className);
+          });
+          
+          container.appendChild(pill);
+        });
+      }
+      
+      function isClassComplete(className) {
+        const entries = eventLineup.filter(e => e.Class === className);
+        return entries.length > 0 && entries.every(e => e.Distance && e.Distance !== '');
+      }
+      
+      function startLiveClass(className) {
+        currentLiveClass = className;
+        currentLiveIndex = 0;
+        
+        // Get entries for this class, sorted by draw number
+        liveClassEntries = eventLineup
+          .filter(e => e.Class === className)
+          .sort((a, b) => {
+            const da = parseFloat(a.draw) || 0;
+            const db = parseFloat(b.draw) || 0;
+            return da - db;
+          });
+        
+        // Find first incomplete hook
+        const firstIncompleteIndex = liveClassEntries.findIndex(e => !e.Distance || e.Distance === '');
+        if (firstIncompleteIndex !== -1) {
+          currentLiveIndex = firstIncompleteIndex;
+        }
+        
+        // Update header
+        document.getElementById('live-event-class-subtitle').textContent = `Current: ${className}`;
+        document.getElementById('live-lineup-class-name').textContent = className;
+        
+        renderClassPills();
+        renderLineupRail();
+        updateLiveStatus();
+        updateTruckSelector();
+        updateLeaderboardTable();
+        updateTalkingPoints();
+      }
+      
+      function updateTruckSelector() {
+        const selector = document.getElementById('live-truck-selector');
+        if (!selector) return;
+        
+        selector.innerHTML = '<option value="">Choose truck to record</option>';
+        
+        if (!liveClassEntries.length) return;
+        
+        liveClassEntries.forEach((entry, index) => {
+          const isPulled = entry.Distance && entry.Distance !== '';
+          const isCurrent = index === currentLiveIndex;
+          
+          const option = document.createElement('option');
+          option.value = index;
+          option.textContent = `Hook #${entry.draw} - ${entry.Truck} (${entry.Driver})${isPulled ? ' ✓ Pulled' : ''}${isCurrent ? ' ← Next up' : ''}`;
+          
+          // Auto-select the current truck
+          if (isCurrent && !isPulled) {
+            option.selected = true;
+          }
+          
+          selector.appendChild(option);
+        });
+      }
+      
+      function updateLiveStatus() {
+        const current = liveClassEntries[currentLiveIndex];
+        const ondeck = liveClassEntries[currentLiveIndex + 1];
+        const staging = liveClassEntries[currentLiveIndex + 2];
+        
+        // Get status chip elements
+        const statusChips = document.querySelectorAll('.status-chip');
+        
+        // Current Hook
+        if (statusChips[0]) {
+          statusChips[0].style.cursor = current ? 'pointer' : 'default';
+          statusChips[0].onclick = current ? () => selectTruckForInput(currentLiveIndex) : null;
+          statusChips[0].oncontextmenu = current ? (e) => { e.preventDefault(); showRosterDetailsForEntry(current); } : null;
+        }
+        document.getElementById('status-current-truck').textContent = current ? current.Truck : '-';
+        document.getElementById('status-current-meta').textContent = current ? `Hook #${current.draw} · ${current.Driver}` : '-';
+        
+        // On Deck
+        if (statusChips[1]) {
+          statusChips[1].style.cursor = ondeck ? 'pointer' : 'default';
+          statusChips[1].onclick = ondeck ? () => selectTruckForInput(currentLiveIndex + 1) : null;
+          statusChips[1].oncontextmenu = ondeck ? (e) => { e.preventDefault(); showRosterDetailsForEntry(ondeck); } : null;
+        }
+        document.getElementById('status-ondeck-truck').textContent = ondeck ? ondeck.Truck : '-';
+        document.getElementById('status-ondeck-meta').textContent = ondeck ? `Hook #${ondeck.draw} · ${ondeck.Driver}` : '-';
+        
+        // Staging
+        if (statusChips[2]) {
+          statusChips[2].style.cursor = staging ? 'pointer' : 'default';
+          statusChips[2].onclick = staging ? () => selectTruckForInput(currentLiveIndex + 2) : null;
+          statusChips[2].oncontextmenu = staging ? (e) => { e.preventDefault(); showRosterDetailsForEntry(staging); } : null;
+        }
+        document.getElementById('status-staging-truck').textContent = staging ? staging.Truck : '-';
+        document.getElementById('status-staging-meta').textContent = staging ? `Hook #${staging.draw} · ${staging.Driver}` : '-';
+      }
+      
+      function showRosterDetailsForEntry(entry) {
+        // Find the matching roster entry for this lineup entry
+        const truckName = entry.Truck || entry.Vehicle;
+        const driverName = entry.Driver;
+        
+        // Search rosterRows for a match
+        const rosterEntry = rosterRows.find(r => {
+          const rTruck = r['Vehicle'] || r['Truck'] || r['Truck Name'] || r['Vehicle Name'] || '';
+          const rDriver = r['Driver'] || r['Driver Name'] || '';
+          return rTruck === truckName || rDriver === driverName;
+        });
+        
+        if (rosterEntry) {
+          openViewDetailsModal(rosterEntry);
+        } else {
+          // If not found in roster, create a temporary entry from lineup data
+          const tempEntry = {
+            'Vehicle': truckName,
+            'Driver': driverName,
+            'Class': entry.Class || '',
+            'Membership #': entry['Membership #'] || '',
+            'Make': entry.Make || entry['Make / Model'] || '',
+            'City': entry.City || '',
+            'State': entry.State || ''
+          };
+          openViewDetailsModal(tempEntry);
+        }
+      }
+      
+      function selectTruckForInput(index) {
+        if (!liveClassEntries[index]) return;
+        
+        const selector = document.getElementById('live-truck-selector');
+        if (selector) {
+          selector.value = index;
+        }
+        
+        const entry = liveClassEntries[index];
+        
+        // Flash visual feedback
+        const distanceInput = document.getElementById('live-distance-input');
+        if (distanceInput) {
+          distanceInput.focus();
+          distanceInput.style.borderColor = 'var(--primary)';
+          distanceInput.style.boxShadow = '0 0 0 3px rgba(var(--primary-rgb, 168, 85, 247), 0.3)';
+          setTimeout(() => {
+            distanceInput.style.borderColor = '';
+            distanceInput.style.boxShadow = '';
+          }, 1000);
+        }
+        
+        // Show notification
+        const truck = entry.Truck;
+        const driver = entry.Driver;
+        const draw = entry.draw;
+        console.log(`Selected: Hook #${draw} - ${truck} (${driver})`);
+      }
+      
+      function renderLineupRail() {
+        const container = document.getElementById('live-lineup-rail');
+        if (!container) return;
+        
+        if (!liveClassEntries.length) {
+          container.innerHTML = '<div style="padding: 20px; color: rgba(249,250,251,0.5);">Select a class to view lineup</div>';
+          return;
+        }
+        
+        container.innerHTML = '';
+        
+        liveClassEntries.forEach((entry, index) => {
+          const chip = document.createElement('div');
+          chip.className = 'chip-card';
+          
+          const isPulled = entry.Distance && entry.Distance !== '';
+          const isCurrent = index === currentLiveIndex;
+          
+          if (isPulled) chip.classList.add('pulled');
+          if (isCurrent && !isPulled) chip.classList.add('current');
+          
+          let status = 'Pending';
+          if (isPulled) {
+            const isDQ = entry.DQ === true || entry.DQ === 'TRUE' || entry.DQ === 'true';
+            status = isDQ ? 'Pulled · DQ' : 'Pulled';
+          } else if (isCurrent) {
+            status = 'Current';
+          } else if (index === currentLiveIndex + 1) {
+            status = 'On deck';
+          }
+          
+          chip.innerHTML = `
+            <div class="meta">Hook #${entry.draw} · ${status}</div>
+            <div class="truck">${escapeHTML(entry.Truck)}</div>
+            <div class="meta">Driver: ${escapeHTML(entry.Driver)}</div>
+          `;
+          
+          // Make clickable
+          chip.style.cursor = 'pointer';
+          chip.style.transition = 'all 0.2s ease';
+          chip.addEventListener('click', () => selectTruckForInput(index));
+          
+          // Right-click to view roster details
+          chip.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            showRosterDetailsForEntry(entry);
+          });
+          
+          chip.addEventListener('mouseenter', () => {
+            chip.style.transform = 'scale(1.03)';
+            chip.style.borderColor = 'var(--primary)';
+          });
+          chip.addEventListener('mouseleave', () => {
+            chip.style.transform = '';
+            chip.style.borderColor = '';
+          });
+          
+          container.appendChild(chip);
+        });
+      }
+      
+      function updateLeaderboardTable() {
+        const tbody = document.querySelector('#live-leaderboard-table tbody');
+        const subtitle = document.getElementById('leaderboard-subtitle');
+        
+        if (!tbody) return;
+        
+        if (!currentLiveClass) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: rgba(249,250,251,0.5);">Select a class to view leaderboard</td></tr>';
+          if (subtitle) subtitle.textContent = 'Select a class';
+          return;
+        }
+        
+        if (subtitle) subtitle.textContent = `${currentLiveClass} · Live`;
+        
+        // Get entries with distances
+        const entries = liveClassEntries
+          .filter(e => e.Distance && e.Distance !== '')
+          .sort((a, b) => {
+            const distA = parseFloat(a.Distance) || 0;
+            const distB = parseFloat(b.Distance) || 0;
+            return distB - distA;
+          });
+        
+        if (!entries.length) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: rgba(249,250,251,0.5);">No hooks recorded yet</td></tr>';
+          return;
+        }
+        
+        tbody.innerHTML = '';
+        
+        entries.forEach((e, index) => {
+          const isDQ = e.DQ === true || e.DQ === 'TRUE' || e.DQ === 'true';
+          const tr = document.createElement('tr');
+          if (isDQ) tr.classList.add('dq');
+          
+          const flags = isDQ ? 'DQ (distance kept)' : '—';
+          
+          tr.innerHTML = `
+            <td>${isDQ ? 'DQ' : (index + 1)}</td>
+            <td>${escapeHTML(e.Truck)}</td>
+            <td>${escapeHTML(e.Driver)}</td>
+            <td>${e.Distance}"</td>
+            <td>${e.Speed || '—'}</td>
+            <td>${flags}</td>
+            <td><button class="edit-pull-btn" style="padding: 4px 8px; font-size: 0.8rem; background: rgba(59,130,246,0.2); border: 1px solid rgba(59,130,246,0.5); border-radius: 4px; color: #60a5fa; cursor: pointer;">Edit</button></td>
+          `;
+          
+          // Add edit handler
+          const editBtn = tr.querySelector('.edit-pull-btn');
+          if (editBtn) {
+            editBtn.addEventListener('click', () => {
+              openEditPullModal(e);
+            });
+          }
+          
+          tbody.appendChild(tr);
+        });
+      }
+      
+      function updateTalkingPoints() {
+        const list = document.getElementById('stats-talking-points');
+        if (!list || !currentLiveClass) return;
+        
+        const completedHooks = liveClassEntries.filter(e => e.Distance && e.Distance !== '').length;
+        const totalHooks = liveClassEntries.length;
+        
+        const entries = liveClassEntries
+          .filter(e => e.Distance && e.Distance !== '')
+          .sort((a, b) => (parseFloat(b.Distance) || 0) - (parseFloat(a.Distance) || 0));
+        
+        const avgDistance = entries.length > 0 
+          ? (entries.reduce((sum, e) => sum + (parseFloat(e.Distance) || 0), 0) / entries.length).toFixed(1)
+          : 0;
+        
+        const leader = entries[0];
+        
+        list.innerHTML = `
+          <li>${currentLiveClass}: ${completedHooks} of ${totalHooks} hooks completed.</li>
+          ${leader ? `<li>Current leader: <strong>${leader.Truck}</strong> at ${leader.Distance}".</li>` : ''}
+          ${entries.length > 1 ? `<li>Average finished distance: ~${avgDistance}".</li>` : ''}
+          ${hookTimestamps.length > 1 ? `<li>Pace: about ${formatAverageTime()} between hooks.</li>` : ''}
+        `;
+      }
+      
+      function formatAverageTime() {
+        if (hookTimestamps.length < 2) return '--:--';
+        let totalSeconds = 0;
+        for (let i = 1; i < hookTimestamps.length; i++) {
+          totalSeconds += (hookTimestamps[i] - hookTimestamps[i - 1]) / 1000;
+        }
+        const avgSeconds = totalSeconds / (hookTimestamps.length - 1);
+        const mins = Math.floor(avgSeconds / 60);
+        const secs = Math.floor(avgSeconds % 60);
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      }
+      
+      function submitHook() {
+        const selector = document.getElementById('live-truck-selector');
+        const selectedIndex = selector.value ? parseInt(selector.value) : currentLiveIndex;
+        
+        if (!liveClassEntries[selectedIndex]) {
+          alert('Please select a truck to record');
+          return;
+        }
+        
+        const distance = document.getElementById('live-distance-input').value;
+        const speed = document.getElementById('live-speed-input').value;
+        const isDQ = document.getElementById('flag-dq').checked;
+        
+        if (!distance) {
+          alert('Please enter at least the distance');
+          return;
+        }
+        
+        const entry = liveClassEntries[selectedIndex];
+        
+        // Check if already recorded
+        if (entry.Distance && entry.Distance !== '') {
+          if (!confirm(`${entry.Truck} already has a recorded distance of ${entry.Distance}". Do you want to overwrite it?`)) {
+            return;
+          }
+        }
+        
+        // Find the actual entry in eventLineup and update it
+        const lineupEntry = eventLineup.find(e => 
+          e.Class === entry.Class && 
+          e.draw === entry.draw && 
+          e.Truck === entry.Truck
+        );
+        
+        if (lineupEntry) {
+          lineupEntry.Distance = distance;
+          lineupEntry.Speed = speed;
+          lineupEntry.DQ = isDQ;
+        }
+        
+        // Record timestamp
+        const now = Date.now();
+        hookTimestamps.push(now);
+        lastHookTimestamp = now;
+        
+        // Clear inputs
+        document.getElementById('live-distance-input').value = '';
+        document.getElementById('live-speed-input').value = '';
+        document.getElementById('flag-dq').checked = false;
+        document.getElementById('flag-scratch').checked = false;
+        document.getElementById('flag-sled-reset').checked = false;
+        document.getElementById('flag-exhibition').checked = false;
+        
+        // Focus distance input for next entry
+        setTimeout(() => {
+          const distanceInput = document.getElementById('live-distance-input');
+          distanceInput.focus();
+          distanceInput.select();
+        }, 100);
+        
+        // Auto-advance logic
+        // If we recorded the sequential current truck, advance normally
+        // If we recorded out of order (any other truck), return to sequential position
+        if (selectedIndex === currentLiveIndex) {
+          // Recorded the sequential current truck - advance to next unpulled
+          const nextUnpulledIndex = liveClassEntries.findIndex((e, idx) => 
+            idx > selectedIndex && (!e.Distance || e.Distance === '')
+          );
+          
+          if (nextUnpulledIndex !== -1) {
+            currentLiveIndex = nextUnpulledIndex;
+          } else {
+            // No more unpulled trucks, move to end
+            currentLiveIndex = liveClassEntries.length;
+          }
+        } else {
+          // Recorded out of order - return to sequential position
+          // Find the next unpulled truck starting from the original current position
+          const nextUnpulledFromCurrent = liveClassEntries.findIndex((e, idx) => 
+            idx >= currentLiveIndex && (!e.Distance || e.Distance === '')
+          );
+          
+          if (nextUnpulledFromCurrent !== -1) {
+            currentLiveIndex = nextUnpulledFromCurrent;
+          } else {
+            // No more unpulled from current position, find first unpulled overall
+            const firstUnpulled = liveClassEntries.findIndex(e => !e.Distance || e.Distance === '');
+            if (firstUnpulled !== -1) {
+              currentLiveIndex = firstUnpulled;
+            } else {
+              // All trucks pulled, move to end
+              currentLiveIndex = liveClassEntries.length;
+            }
+          }
+        }
+        
+        // Check if class is complete
+        const allPulled = liveClassEntries.every(e => e.Distance && e.Distance !== '');
+        if (allPulled) {
+          const isLastClass = classOrder.indexOf(currentLiveClass) === classOrder.length - 1;
+          if (isLastClass) {
+            alert(`${currentLiveClass} complete! All classes finished.`);
+          } else {
+            alert(`${currentLiveClass} complete! Click next class to continue.`);
+          }
+        }
+        
+        // Update all displays
+        renderClassPills();
+        renderLineupRail();
+        updateLiveStatus();
+        updateTruckSelector();
+        updateLeaderboardTable();
+        updateTalkingPoints();
+        renderResults();
+      }
+
+      // == Event Setup Functions ==
+      
+      let currentEditingPullEntry = null;
+      
+      function openEditPullModal(entry) {
+        currentEditingPullEntry = entry;
+        
+        // Populate modal fields
+        document.getElementById('edit-pull-truck').value = entry.Truck || '';
+        document.getElementById('edit-pull-driver').value = entry.Driver || '';
+        document.getElementById('edit-pull-distance').value = entry.Distance || '';
+        document.getElementById('edit-pull-speed').value = entry.Speed || '';
+        
+        const isDQ = entry.DQ === true || entry.DQ === 'TRUE' || entry.DQ === 'true';
+        document.getElementById('edit-pull-dq').checked = isDQ;
+        
+        // Show modal
+        const modal = document.getElementById('edit-pull-modal-overlay');
+        if (modal) {
+          modal.classList.add('active');
+        }
+      }
+      
+      function saveEditedPull() {
+        if (!currentEditingPullEntry) return;
+        
+        const distance = document.getElementById('edit-pull-distance').value;
+        const speed = document.getElementById('edit-pull-speed').value;
+        const isDQ = document.getElementById('edit-pull-dq').checked;
+        
+        if (!distance) {
+          alert('Distance is required');
+          return;
+        }
+        
+        // Find the entry in eventLineup and update
+        const lineupEntry = eventLineup.find(e => 
+          e.Class === currentEditingPullEntry.Class && 
+          e.draw === currentEditingPullEntry.draw && 
+          e.Truck === currentEditingPullEntry.Truck
+        );
+        
+        if (lineupEntry) {
+          lineupEntry.Distance = distance;
+          lineupEntry.Speed = speed;
+          lineupEntry.DQ = isDQ;
+        }
+        
+        // Update the live class entries
+        const liveEntry = liveClassEntries.find(e => 
+          e.draw === currentEditingPullEntry.draw && 
+          e.Truck === currentEditingPullEntry.Truck
+        );
+        
+        if (liveEntry) {
+          liveEntry.Distance = distance;
+          liveEntry.Speed = speed;
+          liveEntry.DQ = isDQ;
+        }
+        
+        // Close modal and refresh displays
+        closeEditPullModal();
+        updateLeaderboardTable();
+        updateTalkingPoints();
+        renderResults();
+        renderLineupRail();
+        updateLiveStatus();
+      }
+      
+      function closeEditPullModal() {
+        const modal = document.getElementById('edit-pull-modal-overlay');
+        if (modal) {
+          modal.classList.remove('active');
+        }
+        currentEditingPullEntry = null;
+      }
+      
+      function updateTokenDisplay() {
+        const tokenCountElement = document.getElementById('token-count');
+        if (tokenCountElement) {
+          tokenCountElement.textContent = availableTokens;
+        }
+      }
+
+      function renderActiveEvents() {
+        const container = document.getElementById('active-events-list');
+        if (!container) return;
+
+        if (!activeEvents || activeEvents.length === 0) {
+          container.innerHTML = '<div style="padding: 20px; text-align: center; color: rgba(249,250,251,0.5);">No active events</div>';
+          return;
+        }
+
+        let html = '';
+        activeEvents.forEach((event, idx) => {
+          const statusColor = event.status === 'active' ? '#667eea' : (event.status === 'canceled' ? '#dc2626' : '#999');
+          let statusText = 'Archived';
+          if (event.status === 'active') statusText = '✓ Active Event';
+          if (event.status === 'canceled') statusText = '✖ Canceled' + (event.cancelReason ? ' — ' + escapeHTML(event.cancelReason) : '');
+          
+          html += '<div style="padding: 16px; background: rgba(15,23,42,0.6); border-radius: 6px; border-left: 4px solid ' + statusColor + '; margin-bottom: 12px; border: 1px solid rgba(102,126,234,0.2);">';
+          html += '<div style="display: flex; justify-content: space-between; align-items: start;">';
+          html += '<div>';
+          html += '<div style="font-weight: 600; margin-bottom: 4px; color: #f9fafb;">' + escapeHTML(event.name) + '</div>';
+          html += '<div style="font-size: 13px; color: rgba(249,250,251,0.7);">' + escapeHTML(event.date) + ' · ' + escapeHTML(event.location) + '</div>';
+          if (event.organization) {
+            html += '<div style="font-size: 12px; color: rgba(249,250,251,0.5); margin-top: 2px;">' + escapeHTML(event.organization) + '</div>';
+          }
+          html += '<div style="font-size: 12px; color: ' + statusColor + '; margin-top: 6px;">' + statusText + '</div>';
+          if (event.status === 'canceled' && event.refunded) {
+            html += '<div style="font-size: 12px; color: #16a34a; margin-top: 4px;">Token refunded</div>';
+          }
+          html += '</div>';
+          html += '<div style="display: flex; gap: 8px;">';
+          if (event.status === 'active') {
+            html += '<button class="modal-btn save" style="padding: 6px 12px; font-size: 13px;" data-edit-event-index="' + idx + '">Edit</button>';
+            html += '<button class="modal-btn delete" style="padding: 6px 12px; font-size: 13px;" data-cancel-event-index="' + idx + '">Cancel + Refund</button>';
+            html += '<button class="modal-btn cancel" style="padding: 6px 12px; font-size: 13px;" data-archive-event-index="' + idx + '">Archive</button>';
+          }
+          html += '</div>';
+          html += '</div></div>';
+        });
+
+        container.innerHTML = html;
+
+        // Add cancel event listeners
+        const cancelButtons = container.querySelectorAll('button[data-cancel-event-index]');
+        cancelButtons.forEach(btn => {
+          btn.addEventListener('click', () => {
+            const idx = parseInt(btn.dataset.cancelEventIndex);
+            openCancelEventModal(activeEvents[idx], idx);
+          });
+        });
+
+        // Add edit event listeners
+        const editButtons = container.querySelectorAll('button[data-edit-event-index]');
+        editButtons.forEach(btn => {
+          btn.addEventListener('click', () => {
+            const idx = parseInt(btn.dataset.editEventIndex);
+            openEditEventModal(activeEvents[idx], idx);
+          });
+        });
+
+        // Add archive event listeners
+        const archiveButtons = container.querySelectorAll('button[data-archive-event-index]');
+        archiveButtons.forEach(btn => {
+          btn.addEventListener('click', () => {
+            const idx = parseInt(btn.dataset.archiveEventIndex);
+            if (confirm('Archive this event? You can still view its results, but it will no longer be active.')) {
+              activeEvents[idx].status = 'archived';
+              renderActiveEvents();
+            }
+          });
+        });
+      }
+
+      // Edit event functions
+      let currentEditingEventIndex = null;
+
+      function openEditEventModal(event, index) {
+        currentEditingEventIndex = index;
+        const modal = document.getElementById('edit-event-modal-overlay');
+        if (!modal) return;
+
+        document.getElementById('edit-event-name').value = event.name || '';
+        document.getElementById('edit-event-date').value = event.date || '';
+        document.getElementById('edit-event-location').value = event.location || '';
+        document.getElementById('edit-event-organization').value = event.organization || '';
+        document.getElementById('edit-event-notes').value = event.notes || '';
+
+        modal.classList.add('active');
+      }
+
+      function closeEditEventModal() {
+        const modal = document.getElementById('edit-event-modal-overlay');
+        if (modal) modal.classList.remove('active');
+        currentEditingEventIndex = null;
+      }
+
+      function saveEventEdit() {
+        if (currentEditingEventIndex === null) return;
+
+        activeEvents[currentEditingEventIndex].name = document.getElementById('edit-event-name').value;
+        activeEvents[currentEditingEventIndex].date = document.getElementById('edit-event-date').value;
+        activeEvents[currentEditingEventIndex].location = document.getElementById('edit-event-location').value;
+        activeEvents[currentEditingEventIndex].organization = document.getElementById('edit-event-organization').value;
+        activeEvents[currentEditingEventIndex].notes = document.getElementById('edit-event-notes').value;
+
+        closeEditEventModal();
+        renderActiveEvents();
+      }
+
+      // Cancel event + refund functions
+      let currentCancelEventIndex = null;
+
+      function openCancelEventModal(event, index) {
+        currentCancelEventIndex = index;
+        const modal = document.getElementById('cancel-event-modal-overlay');
+        if (!modal) return;
+
+        // Prefill summary
+        const summaryEl = document.getElementById('cancel-event-summary');
+        if (summaryEl) {
+          summaryEl.textContent = (event.name || 'Untitled Event') + ' — ' + (event.date || '');
+        }
+
+        // Reset form fields
+        const reasonSel = document.getElementById('cancel-event-reason');
+        const notesEl = document.getElementById('cancel-event-notes');
+        if (reasonSel) reasonSel.value = 'Rain out';
+        if (notesEl) notesEl.value = '';
+
+        modal.classList.add('active');
+      }
+
+      function closeCancelEventModal() {
+        const modal = document.getElementById('cancel-event-modal-overlay');
+        if (modal) modal.classList.remove('active');
+        currentCancelEventIndex = null;
+      }
+
+      function submitCancelEvent() {
+        if (currentCancelEventIndex === null) return;
+        const reasonSel = document.getElementById('cancel-event-reason');
+        const notesEl = document.getElementById('cancel-event-notes');
+        const reason = reasonSel ? reasonSel.value : '';
+        const notes = notesEl ? notesEl.value.trim() : '';
+
+        // Update event status
+        const ev = activeEvents[currentCancelEventIndex];
+        ev.status = 'canceled';
+        ev.cancelReason = reason;
+        ev.cancelNotes = notes;
+
+        // ⚠️ SECURITY: Refund must be processed server-side to prevent abuse
+        // TODO: Replace with API call POST /api/events/{id}/cancel to atomically cancel + refund
+        if (!ev.refunded) {
+          availableTokens += 1;
+          ev.refunded = true;
+          updateTokenDisplay();
+        }
+
+        closeCancelEventModal();
+        renderActiveEvents();
+      }
+
+      function createNewEvent(eventData) {
+  // TODO: Replace with API call: POST /api/events
+  // Server should validate token availability and decrement atomically
+  if (availableTokens <= 0) {
+          alert('No tokens available! Please purchase tokens to create a new event.');
+          return false;
+        }
+
+        // Add new event
+        activeEvents.push({
+          name: eventData.name,
+          date: eventData.date,
+          location: eventData.location,
+          organization: eventData.organization || '',
+          notes: eventData.notes || '',
+          status: 'active'
+        });
+
+        // Deduct token
+  availableTokens--; // TODO: Server should handle this after validation
+        updateTokenDisplay();
+        renderActiveEvents();
+
+        return true;
+      }
+
+      // Tiny sanity tests for parseRosterCSV so we know it behaves
+      (function testParseRosterCSV() {
+        const sample1 = 'Class,Membership #,Vehicle,Make / Model,Driver\n' +
+                        '2WD Prostock,7201,Haymaker,Chevy S-10,Cole Altman';
+        const rows1 = parseRosterCSV(sample1);
+        if (!Array.isArray(rows1) || rows1.length !== 1 || rows1[0]['Vehicle'] !== 'Haymaker') {
+          console.warn('parseRosterCSV test1 failed:', rows1);
+        }
+
+        const sample2 = 'Class,Membership #,Vehicle,Make / Model,Driver\n' +
+                        '6200 2WD Local,6201,Southern Thunder,Chevy C10,Jake Miller\n' +
+                        '6200 2WD Local,6202,Dirt Road Diva,Ford F-150,Sarah Collins';
+        const rows2 = parseRosterCSV(sample2);
+        if (!Array.isArray(rows2) || rows2.length !== 2 || rows2[1]['Driver'] !== 'Sarah Collins') {
+          console.warn('parseRosterCSV test2 failed:', rows2);
+        }
+      })();
+
+      document.addEventListener('DOMContentLoaded', () => {
+        // Tabs
+        const tabs = document.querySelectorAll('nav button');
+        const sections = document.querySelectorAll('main section[data-tab]');
+        tabs.forEach((btn, idx) => {
+          btn.addEventListener('click', () => {
+            tabs.forEach(b => b.classList.remove('active'));
+            sections.forEach(s => s.classList.remove('active'));
+            btn.classList.add('active');
+            if (sections[idx]) sections[idx].classList.add('active');
+          });
+        });
+
+        // Theme switching
+        const themeChips = document.querySelectorAll('.theme-chip');
+        const body = document.body;
+        const themeClasses = ['theme-purple', 'theme-blue', 'theme-neutral'];
+        function applyTheme(cls) {
+          body.classList.remove(...themeClasses);
+          body.classList.add(cls);
+        }
+        function applyCustomPrimary(hex) {
+          // Adjust derived shades (simple heuristic)
+          const soft = hex + 'e6'; // fallback overlay usage
+          const bright = hex; // could lighten
+          document.documentElement.style.setProperty('--primary', hex);
+          document.documentElement.style.setProperty('--primary-soft', hex);
+          document.documentElement.style.setProperty('--primary-bright', bright);
+          document.documentElement.style.setProperty('--primary-shadow', 'rgba(0,0,0,0.35)');
+        }
+        themeChips.forEach(chip => {
+          chip.addEventListener('click', () => {
+            const theme = chip.dataset.theme;
+            if (!theme) return;
+            applyTheme(theme);
+            themeChips.forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            saveSettings();
+          });
+        });
+        // default theme
+        applyTheme('theme-purple');
+        const defaultChip = document.querySelector('.theme-chip[data-theme="theme-purple"]');
+        if (defaultChip) defaultChip.classList.add('active');
+
+        // Mode switching
+        const darkBtn = document.getElementById('enable-dark-mode');
+        const lightBtn = document.getElementById('enable-light-mode');
+        function setMode(mode) {
+          if (mode === 'light') {
+            body.classList.add('light-mode');
+          } else {
+            body.classList.remove('light-mode');
+          }
+          saveSettings();
+        }
+        if (darkBtn) darkBtn.addEventListener('click', () => setMode('dark'));
+        if (lightBtn) lightBtn.addEventListener('click', () => setMode('light'));
+
+        // Density switching
+        const densityComfortable = document.getElementById('density-comfortable');
+        const densityCompact = document.getElementById('density-compact');
+        function setDensity(d) {
+          if (d === 'compact') {
+            body.classList.add('density-compact');
+          } else {
+            body.classList.remove('density-compact');
+          }
+          saveSettings();
+        }
+        if (densityComfortable) densityComfortable.addEventListener('click', () => setDensity('comfortable'));
+        if (densityCompact) densityCompact.addEventListener('click', () => setDensity('compact'));
+
+        // Glow intensity slider (1..10)
+        const glowSlider = document.getElementById('glow-intensity-slider');
+        const glowValueLabel = document.getElementById('glow-intensity-value');
+        function lerp(a, b, t) { return a + (b - a) * t; }
+        function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
+        function setGlow(level) {
+          const n = parseInt(level, 10);
+          const lv = Number.isNaN(n) ? 5 : clamp(n, 1, 10);
+          const t = (lv - 1) / 9; // 0..1
+
+          // Primary (green)
+          const pOff = Math.round(lerp(4, 24, t));
+          const pBlur = Math.round(lerp(12, 60, t));
+          const pAlpha = Math.min(1, lerp(0.25, 0.95, t));
+          const pHoverOff = Math.round(pOff * 1.2);
+          const pHoverBlur = Math.round(pBlur * 1.2);
+          const pHoverAlpha = Math.min(1, pAlpha + 0.05);
+
+          // Danger (red)
+          const dOff = pOff;
+          const dBlur = pBlur;
+          const dAlpha = pAlpha;
+          const dHoverOff = pHoverOff;
+          const dHoverBlur = pHoverBlur;
+          const dHoverAlpha = pHoverAlpha;
+
+          // Accent/nav based on current theme's --primary-shadow color
+          const cs = getComputedStyle(document.documentElement);
+          const accentColor = (cs.getPropertyValue('--primary-shadow') || 'rgba(0,0,0,0.35)').trim();
+          const aOff = Math.round(lerp(6, 28, t));
+          const aBlur = Math.round(lerp(16, 56, t));
+          const nOff = aOff + 2;
+          const nBlur = aBlur + 2;
+
+          // Apply CSS variables
+          const root = document.documentElement.style;
+          root.setProperty('--glow-primary', `0 ${pOff}px ${pBlur}px rgba(22,163,74,${pAlpha.toFixed(2)})`);
+          root.setProperty('--glow-primary-hover', `0 ${pHoverOff}px ${pHoverBlur}px rgba(22,163,74,${pHoverAlpha.toFixed(2)})`);
+          root.setProperty('--glow-danger', `0 ${dOff}px ${dBlur}px rgba(220,38,38,${dAlpha.toFixed(2)})`);
+          root.setProperty('--glow-danger-hover', `0 ${dHoverOff}px ${dHoverBlur}px rgba(220,38,38,${dHoverAlpha.toFixed(2)})`);
+          root.setProperty('--glow-accent', `0 ${aOff}px ${aBlur}px ${accentColor}`);
+          root.setProperty('--glow-nav-active', `0 ${nOff}px ${nBlur}px ${accentColor}`);
+
+          if (glowSlider) glowSlider.value = String(lv);
+          if (glowValueLabel) glowValueLabel.textContent = `Current: ${lv}/10`;
+          saveSettings();
+        }
+        if (glowSlider) {
+          glowSlider.addEventListener('input', () => setGlow(glowSlider.value));
+          glowSlider.addEventListener('change', () => setGlow(glowSlider.value));
+        }
+
+        // Custom primary color
+        const customColorInput = document.getElementById('custom-primary-color');
+        const applyCustomColorBtn = document.getElementById('apply-custom-color-btn');
+        if (applyCustomColorBtn && customColorInput) {
+          applyCustomColorBtn.addEventListener('click', () => {
+            const val = customColorInput.value;
+            if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(val)) {
+              applyCustomPrimary(val);
+              saveSettings();
+            } else {
+              alert('Invalid hex color');
+            }
+          });
+        }
+
+        // Local persistence
+        function saveSettings() {
+          const activeThemeChip = document.querySelector('.theme-chip.active');
+          const theme = activeThemeChip ? activeThemeChip.dataset.theme : 'theme-purple';
+          const mode = body.classList.contains('light-mode') ? 'light' : 'dark';
+          const density = body.classList.contains('density-compact') ? 'compact' : 'comfortable';
+          const customColor = customColorInput ? customColorInput.value : '#4b0082';
+          const glowSlider = document.getElementById('glow-intensity-slider');
+          const glowLevel = glowSlider ? parseInt(glowSlider.value, 10) : 5;
+          const settings = { theme, mode, density, customColor, glowLevel };
+          localStorage.setItem('lifestats_settings', JSON.stringify(settings));
+          // TODO: POST /api/user/settings for server persistence
+        }
+        function loadSettings() {
+          try {
+            const raw = localStorage.getItem('lifestats_settings');
+            if (!raw) return;
+            const s = JSON.parse(raw);
+            if (s.theme && themeClasses.includes(s.theme)) {
+              applyTheme(s.theme);
+              themeChips.forEach(c => c.classList.remove('active'));
+              const target = document.querySelector('.theme-chip[data-theme="' + s.theme + '"]');
+              if (target) target.classList.add('active');
+            }
+            if (s.mode) setMode(s.mode);
+            if (s.density) setDensity(s.density);
+            if (s.customColor && customColorInput) {
+              customColorInput.value = s.customColor;
+              applyCustomPrimary(s.customColor);
+            }
+            if (typeof s.glowLevel === 'number' || s.glow) {
+              const legacyMap = { off: 1, mid: 5, high: 10 };
+              setGlow(s.glowLevel || legacyMap[s.glow] || 5);
+            }
+          } catch (e) {
+            console.warn('Failed to load saved settings', e);
+          }
+        }
+        loadSettings();
+
+        // Settings collapse
+        const toggle = document.querySelector('.settings-toggle');
+        const panel = document.querySelector('.settings-panel');
+        if (toggle && panel) {
+          panel.classList.add('collapsed');
+          toggle.addEventListener('click', () => {
+            panel.classList.toggle('collapsed');
+          });
+        }
+
+        // Lineup builder: hook trucks from roster
+        const searchInput = document.getElementById('lineup-roster-search');
+        const drawInput = document.getElementById('lineup-draw-number');
+        const addButton = document.getElementById('add-to-lineup-btn');
+
+        function applyRosterSelectionFromSearch() {
+          const inputEl = document.getElementById('lineup-roster-search');
+          const datalist = document.getElementById('lineup-roster-options');
+          if (!inputEl || !datalist) return null;
+          const val = inputEl.value;
+          if (!val) return null;
+          const options = Array.from(datalist.options || []);
+          const match = options.find(o => o.value === val);
+          if (!match) return null;
+          const idx = parseInt(match.dataset.rowIndex || '-1', 10);
+          if (Number.isNaN(idx) || !rosterRows || !rosterRows[idx]) return null;
+          const row = rosterRows[idx];
+          const cls = row['Class'] || row['Cass'] || row['CLASS'] || '';
+          const vehicle = row['Vehicle'] || row['Truck'] || row['Truck Name'] || row['Vehicle Name'] || '';
+          const driver = row['Driver'] || row['Driver Name'] || '';
+
+          const clsInput = document.getElementById('lineup-class-display');
+          const truckInput = document.getElementById('lineup-truck-display');
+          const driverInput = document.getElementById('lineup-driver-display');
+          if (clsInput) clsInput.value = cls;
+          if (truckInput) truckInput.value = vehicle;
+          if (driverInput) driverInput.value = driver;
+
+          return { rowIndex: idx, row, className: cls, truck: vehicle, driver };
+        }
+
+        if (searchInput) {
+          searchInput.addEventListener('change', () => {
+            applyRosterSelectionFromSearch();
+          });
+          searchInput.addEventListener('blur', () => {
+            applyRosterSelectionFromSearch();
+          });
+        }
+
+        if (addButton) {
+          addButton.addEventListener('click', () => {
+            const sel = applyRosterSelectionFromSearch();
+            if (!sel) return;
+            const drawVal = drawInput ? drawInput.value.trim() : '';
+            if (!drawVal) return;
+            const drawNum = parseFloat(drawVal);
+            const spaMember = !!(sel.row['Membership #'] || sel.row['Membership'] || sel.row['Member #'] || sel.row['Member']);
+            eventLineup.push({
+              draw: Number.isNaN(drawNum) ? drawVal : drawNum,
+              Class: sel.className,
+              Truck: sel.truck,
+              Driver: sel.driver,
+              spaMember
+            });
+            renderEventLineup();
+            updateClassOrderFromLineup();
+          });
+        }
+
+        // Edit modal functionality
+        const editCancelBtn = document.getElementById('edit-modal-cancel');
+        const editSaveBtn = document.getElementById('edit-modal-save');
+        const editForm = document.getElementById('edit-member-form');
+        const editOverlay = document.getElementById('edit-modal-overlay');
+
+        if (editCancelBtn) {
+          editCancelBtn.addEventListener('click', closeEditModal);
+        }
+
+        if (editOverlay) {
+          editOverlay.addEventListener('click', (e) => {
+            if (e.target === editOverlay) closeEditModal();
+          });
+        }
+
+        if (editSaveBtn) {
+          editSaveBtn.addEventListener('click', () => {
+            const updatedData = {
+              'Membership #': document.getElementById('edit-membership').value,
+              'Vehicle': document.getElementById('edit-vehicle').value,
+              'Make': document.getElementById('edit-makemodel').value,
+              'City': document.getElementById('edit-city').value,
+              'State': document.getElementById('edit-state').value,
+              'Driver': document.getElementById('edit-driver').value,
+              'Additional Driver': document.getElementById('edit-additionaldriver').value
+            };
+            
+            // Update the roster row data
+            if (currentEditingRowIndex >= 0 && rosterRows[currentEditingRowIndex]) {
+              Object.assign(rosterRows[currentEditingRowIndex], updatedData);
+            }
+            
+            closeEditModal();
+            renderRosterIntoGrid(document.getElementById('roster-grid'), rosterRows);
+          });
+        }
+
+        // View Details Modal functionality
+        const detailsCloseBtn = document.getElementById('details-close-btn');
+        const detailsEditBtn = document.getElementById('details-edit-btn');
+        const detailsOverlay = document.getElementById('view-details-modal-overlay');
+
+        if (detailsCloseBtn) {
+          detailsCloseBtn.addEventListener('click', closeViewDetailsModal);
+        }
+
+        if (detailsOverlay) {
+          detailsOverlay.addEventListener('click', (e) => {
+            if (e.target === detailsOverlay) closeViewDetailsModal();
+          });
+        }
+
+        if (detailsEditBtn) {
+          detailsEditBtn.addEventListener('click', () => {
+            const btn = document.getElementById('details-edit-btn');
+            const membership = document.getElementById('details-membership');
+            
+            // If currently in edit mode, save the changes
+            if (membership.readOnly === false) {
+              const updatedData = {
+                'Membership #': document.getElementById('details-membership').value,
+                'Vehicle': document.getElementById('details-vehicle').value,
+                'Make': document.getElementById('details-makemodel').value,
+                'City': document.getElementById('details-city').value,
+                'State': document.getElementById('details-state').value,
+                'Driver': document.getElementById('details-driver').value,
+                'Additional Driver': document.getElementById('details-additionaldriver').value
+              };
+              
+              // Update the roster row data
+              if (currentEditingRowIndex >= 0 && rosterRows[currentEditingRowIndex]) {
+                Object.assign(rosterRows[currentEditingRowIndex], updatedData);
+              }
+              
+              setDetailsDisplayMode();
+              renderRosterIntoGrid(document.getElementById('roster-grid'), rosterRows);
+            } else {
+              // If currently in display mode, switch to edit mode
+              setDetailsEditMode();
+            }
+          });
+        }
+
+        // Delete button handler
+        const detailsDeleteBtn = document.getElementById('details-delete-btn');
+        if (detailsDeleteBtn) {
+          detailsDeleteBtn.addEventListener('click', () => {
+            const driverName = document.getElementById('details-driver').value;
+            const vehicleName = document.getElementById('details-vehicle').value;
+            
+            // Strong confirmation warning
+            const confirmMessage = 
+              `⚠️ WARNING: PERMANENT DELETION ⚠️\n\n` +
+              `You are about to DELETE:\n` +
+              `Driver: ${driverName}\n` +
+              `Vehicle: ${vehicleName}\n\n` +
+              `THIS ACTION CANNOT BE UNDONE!\n` +
+              `All data for this driver will be PERMANENTLY LOST and CANNOT be recovered.\n\n` +
+              `Are you absolutely sure you want to delete this member?`;
+            
+            if (confirm(confirmMessage)) {
+              // Double confirmation
+              const doubleConfirm = confirm(
+                `FINAL CONFIRMATION:\n\n` +
+                `This is your last chance to cancel.\n` +
+                `Deleting ${driverName} is PERMANENT and IRREVERSIBLE.\n\n` +
+                `Click OK to permanently delete this member.`
+              );
+              
+              if (doubleConfirm) {
+                // Soft delete - replace with hidden "Robert Young" placeholder
+                // This maintains data integrity for placements/scores
+                if (currentEditingRowIndex >= 0 && rosterRows[currentEditingRowIndex]) {
+                  softDeleteMember(currentEditingRowIndex);
+                  closeViewDetailsModal();
+                  renderRosterIntoGrid(document.getElementById('roster-grid'), rosterRows);
+                  buildRosterSuggestions();
+                }
+              }
+            }
+          });
+        }
+
+        // Add Vehicle Modal functionality
+        const addVehicleBtn = document.getElementById('add-vehicle-btn');
+        const addVehicleModalOverlay = document.getElementById('add-vehicle-modal-overlay');
+        const addVehicleForm = document.getElementById('add-vehicle-form');
+        const addVehicleSaveBtn = document.getElementById('add-vehicle-modal-save');
+        const addVehicleCancelBtn = document.getElementById('add-vehicle-modal-cancel');
+
+        function openAddVehicleModal() {
+          if (addVehicleModalOverlay) {
+            addVehicleModalOverlay.classList.add('active');
+            addVehicleForm.reset();
+          }
+        }
+
+        function closeAddVehicleModal() {
+          if (addVehicleModalOverlay) {
+            addVehicleModalOverlay.classList.remove('active');
+          }
+          addVehicleForm.reset();
+        }
+
+        if (addVehicleBtn) {
+          addVehicleBtn.addEventListener('click', openAddVehicleModal);
+        }
+
+        if (addVehicleCancelBtn) {
+          addVehicleCancelBtn.addEventListener('click', closeAddVehicleModal);
+        }
+
+        if (addVehicleModalOverlay) {
+          addVehicleModalOverlay.addEventListener('click', (e) => {
+            if (e.target === addVehicleModalOverlay) closeAddVehicleModal();
+          });
+        }
+
+        if (addVehicleSaveBtn) {
+          addVehicleSaveBtn.addEventListener('click', () => {
+            const newVehicle = {
+              'Class': document.getElementById('add-class').value,
+              'Membership #': document.getElementById('add-membership').value,
+              'Vehicle': document.getElementById('add-vehicle').value,
+              'Make': document.getElementById('add-makemodel').value,
+              'City': document.getElementById('add-city').value,
+              'State': document.getElementById('add-state').value,
+              'Driver': document.getElementById('add-driver').value,
+              'Additional Driver': document.getElementById('add-additionaldriver').value
+            };
+            
+            // Add to roster
+            rosterRows.push(newVehicle);
+            
+            closeAddVehicleModal();
+            renderRosterIntoGrid(document.getElementById('roster-grid'), rosterRows);
+            buildRosterSuggestions();
+          });
+        }
+
+        // Load roster for roster & lineup
+        loadRosterFromCSV();
+        loadLineupFromCSV();
+        
+        // Initialize live event
+        setTimeout(() => {
+          initLiveEvent();
+        }, 500);
+
+        // Lineup inline form functionality
+        const lineupRosterSearchInline = document.getElementById('lineup-roster-search-inline');
+        const addToLineupInlineBtn = document.getElementById('add-to-lineup-inline-btn');
+        const randomDrawBtn = document.getElementById('random-draw-btn');
+        const lineupDrawNumberInline = document.getElementById('lineup-draw-number-inline');
+
+        if (lineupRosterSearchInline) {
+          lineupRosterSearchInline.addEventListener('input', applyRosterSelectionFromSearchInline);
+          lineupRosterSearchInline.addEventListener('change', applyRosterSelectionFromSearchInline);
+        }
+
+        if (randomDrawBtn) {
+          randomDrawBtn.addEventListener('click', () => {
+            const randomNum = getRandomUnusedDrawNumber();
+            if (randomNum !== null && lineupDrawNumberInline) {
+              lineupDrawNumberInline.value = randomNum;
+            }
+          });
+        }
+
+        if (addToLineupInlineBtn) {
+          addToLineupInlineBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            validateAndAddToLineupInline();
+          });
+        }
+
+        // Add Enter key support for lineup form
+        const lineupFormInline = document.getElementById('lineup-form-inline');
+        if (lineupFormInline) {
+          lineupFormInline.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              validateAndAddToLineupInline();
+            }
+          });
+        }
+
+        // Class Order - render initially
+        renderClassOrder();
+
+        // Live Event submit handler
+        const submitHookBtn = document.getElementById('submit-hook-btn');
+        if (submitHookBtn) {
+          submitHookBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            submitHook();
+          });
+        }
+
+        // Add Enter key handlers for distance and speed inputs
+        const distanceInput = document.getElementById('live-distance-input');
+        const speedInput = document.getElementById('live-speed-input');
+        
+        if (distanceInput) {
+          distanceInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              submitHook();
+            }
+          });
+        }
+        
+        if (speedInput) {
+          speedInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              submitHook();
+            }
+          });
+        }
+
+        // Edit Pull Modal handlers
+        const savePullEditBtn = document.getElementById('save-pull-edit-btn');
+        const cancelPullEditBtn = document.getElementById('cancel-pull-edit-btn');
+        const editPullModalOverlay = document.getElementById('edit-pull-modal-overlay');
+        
+        if (savePullEditBtn) {
+          savePullEditBtn.addEventListener('click', saveEditedPull);
+        }
+        
+        if (cancelPullEditBtn) {
+          cancelPullEditBtn.addEventListener('click', closeEditPullModal);
+        }
+        
+        if (editPullModalOverlay) {
+          editPullModalOverlay.addEventListener('click', (e) => {
+            if (e.target === editPullModalOverlay) {
+              closeEditPullModal();
+            }
+          });
+        }
+
+        // Lineup edit modal functionality
+        const editLineupModalOverlay = document.getElementById('edit-lineup-modal-overlay');
+        const saveLineupEditBtn = document.getElementById('save-lineup-edit-btn');
+        const deleteLineupEntryBtn = document.getElementById('delete-lineup-entry-btn');
+        const cancelLineupEditBtn = document.getElementById('cancel-lineup-edit-btn');
+
+        if (saveLineupEditBtn) {
+          saveLineupEditBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            saveLineupEdit();
+          });
+        }
+
+        if (deleteLineupEntryBtn) {
+          deleteLineupEntryBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            deleteLineupEntry();
+          });
+        }
+
+        if (cancelLineupEditBtn) {
+          cancelLineupEditBtn.addEventListener('click', closeLineupEditModal);
+        }
+
+        if (editLineupModalOverlay) {
+          editLineupModalOverlay.addEventListener('click', (e) => {
+            if (e.target === editLineupModalOverlay) closeLineupEditModal();
+          });
+        }
+
+        // Initial render happens via loadLineupFromCSV()
+
+        // Event Setup functionality
+        const eventSetupForm = document.getElementById('event-setup-form');
+        const purchaseTokensBtn = document.getElementById('purchase-tokens-btn');
+
+        // Initialize event setup displays
+        updateTokenDisplay();
+        renderActiveEvents();
+
+        if (eventSetupForm) {
+          eventSetupForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const eventData = {
+              name: document.getElementById('event-name').value,
+              date: document.getElementById('event-date').value,
+              location: document.getElementById('event-location').value,
+              organization: document.getElementById('event-organization').value,
+              notes: document.getElementById('event-notes').value
+            };
+
+            if (createNewEvent(eventData)) {
+              alert('Event created successfully! 1 token has been used.');
+              eventSetupForm.reset();
+            }
+          });
+        }
+
+        if (purchaseTokensBtn) {
+          purchaseTokensBtn.addEventListener('click', () => {
+            alert('Token Purchase System\n\nThis will integrate with your payment processor (Stripe, PayPal, etc.)\n\nFor now, this is a demo - tokens will be added to your account after payment.');
+            // TODO: Integrate with payment API
+            // For demo purposes, add tokens
+            availableTokens += 5;
+            updateTokenDisplay();
+          });
+        }
+
+        // Edit Event modal functionality
+        // Cancel Event modal functionality
+        const cancelEventModalOverlay = document.getElementById('cancel-event-modal-overlay');
+        const confirmCancelEventBtn = document.getElementById('confirm-cancel-event-btn');
+        const cancelCancelEventBtn = document.getElementById('cancel-cancel-event-btn');
+
+        if (confirmCancelEventBtn) {
+          confirmCancelEventBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            submitCancelEvent();
+          });
+        }
+
+        if (cancelCancelEventBtn) {
+          cancelCancelEventBtn.addEventListener('click', closeCancelEventModal);
+        }
+
+        if (cancelEventModalOverlay) {
+          cancelEventModalOverlay.addEventListener('click', (e) => {
+            if (e.target === cancelEventModalOverlay) closeCancelEventModal();
+          });
+        }
+
+        const editEventModalOverlay = document.getElementById('edit-event-modal-overlay');
+        const saveEventEditBtn = document.getElementById('save-event-edit-btn');
+        const cancelEventEditBtn = document.getElementById('cancel-event-edit-btn');
+
+        if (saveEventEditBtn) {
+          saveEventEditBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            saveEventEdit();
+          });
+        }
+
+        if (cancelEventEditBtn) {
+          cancelEventEditBtn.addEventListener('click', closeEditEventModal);
+        }
+
+        if (editEventModalOverlay) {
+          editEventModalOverlay.addEventListener('click', (e) => {
+            if (e.target === editEventModalOverlay) closeEditEventModal();
+          });
+        }
+
+        // Hide loading screen with fake loading sequence
+        const loadingMessages = [
+          'Connecting to servers...',
+          'Loading roster database...',
+          'Initializing live event engine...',
+          'Syncing lineup data...',
+          'Loading class configurations...',
+          'Preparing results system...',
+          'Establishing real-time sync...',
+          'Ready!'
+        ];
+        
+        let messageIndex = 0;
+        const loadingStatus = document.getElementById('loading-status');
+        
+        const messageInterval = setInterval(() => {
+          if (messageIndex < loadingMessages.length - 1) {
+            if (loadingStatus) {
+              loadingStatus.textContent = loadingMessages[messageIndex];
+            }
+            messageIndex++;
+          } else {
+            clearInterval(messageInterval);
+            if (loadingStatus) {
+              loadingStatus.textContent = loadingMessages[messageIndex];
+            }
+            
+            // Fade out after showing "Ready!"
+            setTimeout(() => {
+              const loadingScreen = document.getElementById('loading-screen');
+              if (loadingScreen) {
+                loadingScreen.classList.add('fade-out');
+                setTimeout(() => {
+                  loadingScreen.style.display = 'none';
+                }, 1500); // Match the 1.5s transition time
+              }
+            }, 400);
+          }
+        }, 400); // Change message every 400ms (3.2 seconds total)
+
+        // Fullscreen functionality
+        function enterFullscreen() {
+          const elem = document.documentElement;
+          if (elem.requestFullscreen) {
+            elem.requestFullscreen();
+          } else if (elem.webkitRequestFullscreen) { /* Safari */
+            elem.webkitRequestFullscreen();
+          } else if (elem.msRequestFullscreen) { /* IE11 */
+            elem.msRequestFullscreen();
+          }
+          updateFullscreenButton();
+        }
+
+        function exitFullscreen() {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.webkitExitFullscreen) { /* Safari */
+            document.webkitExitFullscreen();
+          } else if (document.msExitFullscreen) { /* IE11 */
+            document.msExitFullscreen();
+          }
+          updateFullscreenButton();
+        }
+
+        function toggleFullscreen() {
+          if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+            enterFullscreen();
+          } else {
+            exitFullscreen();
+          }
+        }
+
+        function updateFullscreenButton() {
+          const btn = document.getElementById('fullscreen-toggle-btn');
+          if (btn) {
+            const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+            btn.textContent = isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen';
+          }
+        }
+
+        // Fullscreen button handler
+        const fullscreenBtn = document.getElementById('fullscreen-toggle-btn');
+        if (fullscreenBtn) {
+          fullscreenBtn.addEventListener('click', toggleFullscreen);
+        }
+
+        // Update button text when fullscreen changes (ESC key, etc)
+        document.addEventListener('fullscreenchange', updateFullscreenButton);
+        document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+        document.addEventListener('msfullscreenchange', updateFullscreenButton);
+      });
+    })();
+  </script>
+</head>
+<body class="theme-purple">
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div class="loading-logo">
+      <img src="https://thesouthernpullers.com/wp-content/uploads/2025/04/logo.png" alt="SPA Logo">
+    </div>
+    <div class="loading-title">LiveStats Engine</div>
+    <div class="loading-subtitle">Initializing Event Control Console</div>
+    <div class="loading-spinner"></div>
+    <div class="loading-status" id="loading-status">Loading roster data...</div>
+  </div>
+
+  <div class="app-shell">
+    <header>
+      <div class="brand">
+        <img src="https://thesouthernpullers.com/wp-content/uploads/2025/04/logo.png" alt="Southern Pullers Association logo">
+        <div>
+          <h1>LiveStats Engine</h1>
+          <p>Southern Pullers · Event Control Console</p>
+        </div>
+      </div>
+      <div class="event-meta">
+        <div class="sync-meta" id="last-sync-time">Last sync: Never</div>
+        <div class="badge" id="connection-status">⚠ Connecting...</div><br>
+        <div style="margin-top:4px;">
+          Event: Battle in The Boro' · Statesboro, GA<br>
+          Operator: Developer Console
+        </div>
+        <button id="fullscreen-toggle-btn" style="margin-top: 8px; padding: 6px 12px; background: rgba(59,130,246,0.2); border: 1px solid rgba(59,130,246,0.5); border-radius: 4px; color: #60a5fa; cursor: pointer; font-size: 0.85rem;">Enter Fullscreen</button>
+      </div>
+    </header>
+
+    <nav>
+      <button class="active">Roster</button>
+      <button>Lineup</button>
+      <button>Live Event</button>
+      <button>Results</button>
+      <div style="flex: 1;"></div>
+      <div class="nav-separator"></div>
+      <button>Event Setup</button>
+      <button>Settings</button>
+    </nav>
+
+    <main>
+      <!-- ROSTER -->
+      <section data-tab class="active">
+        <div style="margin-bottom: 16px;">
+          <button class="primary-btn" id="add-vehicle-btn" type="button" style="width: auto; padding: 10px 16px; margin: 0;">+ Add Vehicle to Roster</button>
+        </div>
+        <div id="roster-grid" class="lineup-grid">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">SPA Roster</div>
+                <div class="card-subtitle">Loading roster from master CSV…</div>
+              </div>
+            </div>
+            <p class="card-subtitle">If this never loads in your browser, check that the CSV link is public and CORS is allowed.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- LINEUP -->
+      <section data-tab>
+        <!-- Event Statistics -->
+        <div class="card" style="margin-bottom: 16px;">
+          <div class="card-body" style="padding: 12px 16px;">
+            <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; font-weight: 700; color: #fff;" id="lineup-people-count">0</div>
+                <div>
+                  <div style="font-size: 0.7rem; color: rgba(249,250,251,0.6); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1px;">Trucks</div>
+                  <div style="font-size: 0.85rem; font-weight: 600; color: rgba(249,250,251,0.95);">Signed Up</div>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; font-weight: 700; color: #fff;" id="lineup-classes-count">0</div>
+                <div>
+                  <div style="font-size: 0.7rem; color: rgba(249,250,251,0.6); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1px;">Classes</div>
+                  <div style="font-size: 0.85rem; font-weight: 600; color: rgba(249,250,251,0.95);">Competing</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Class Lineup Order -->
+        <div class="card" style="margin-bottom: 16px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Class Lineup Order</div>
+              <div class="card-subtitle">Pulling order for tonight · Drag to reorder</div>
+            </div>
+          </div>
+          <div class="card-body" style="padding: 12px 14px;">
+            <div id="class-order-list" style="display: flex; flex-wrap: wrap; gap: 8px; min-height: 40px; align-items: center;">
+              <!-- Class order chips will be populated here -->
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Add to Event Lineup</div>
+              <div class="card-subtitle">Search roster and assign draw number</div>
+            </div>
+          </div>
+          <form id="lineup-form-inline" class="card-body" style="padding: 20px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+              <div class="field">
+                <label for="lineup-roster-search-inline">Search Vehicle / Driver (from roster)</label>
+                <input type="text" id="lineup-roster-search-inline" placeholder="Start typing truck or driver name…" list="lineup-roster-options-inline">
+                <datalist id="lineup-roster-options-inline"></datalist>
+              </div>
+              <div class="field">
+                <label for="lineup-draw-number-inline">Draw #</label>
+                <div style="display: flex; gap: 8px;">
+                  <input type="number" id="lineup-draw-number-inline" placeholder="Enter draw # or use random" min="1" max="100" style="flex: 1;">
+                  <button type="button" id="random-draw-btn" class="modal-btn save" style="white-space: nowrap; padding: 0 16px;">🎲 Random Draw</button>
+                </div>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+              <div class="field">
+                <label for="lineup-class-display-inline">Class</label>
+                <input type="text" id="lineup-class-display-inline" placeholder="Auto-filled from roster" readonly class="detail-display">
+              </div>
+              <div class="field">
+                <label for="lineup-truck-display-inline">Truck</label>
+                <input type="text" id="lineup-truck-display-inline" placeholder="Auto-filled from roster" readonly class="detail-display">
+              </div>
+              <div class="field">
+                <label for="lineup-driver-display-inline">Driver</label>
+                <input type="text" id="lineup-driver-display-inline" placeholder="Auto-filled from roster" readonly class="detail-display">
+              </div>
+            </div>
+            <button type="button" id="add-to-lineup-inline-btn" class="primary-btn" style="width: auto;">Add to Lineup</button>
+          </form>
+        </div>
+
+        <div id="lineup-grid" class="lineup-grid">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Event Lineup</div>
+                <div class="card-subtitle">No entries added yet. Use the form above to start building tonight's draws.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- LIVE EVENT -->
+      <section data-tab>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Run Control</div>
+              <div class="card-subtitle">Live class input & hook control</div>
+            </div>
+            <div class="card-subtitle" id="live-event-class-subtitle">Select a class to begin</div>
+          </div>
+          
+          <div class="tag-label">Class order tonight</div>
+          <div class="class-pill-row" id="live-class-pills">
+            <!-- Class pills will be populated here -->
+          </div>
+
+          <div class="status-row">
+            <div class="status-chip">
+              <div class="card-subtitle">🎯 Current Hook</div>
+              <div class="status-main" id="status-current-truck">-</div>
+              <div class="status-sub" id="status-current-meta">-</div>
+            </div>
+            <div class="status-chip">
+              <div class="card-subtitle">On Deck</div>
+              <div class="status-main" id="status-ondeck-truck">-</div>
+              <div class="status-sub" id="status-ondeck-meta">-</div>
+            </div>
+            <div class="status-chip">
+              <div class="card-subtitle">Staging</div>
+              <div class="status-main" id="status-staging-truck">-</div>
+              <div class="status-sub" id="status-staging-meta">-</div>
+            </div>
+          </div>
+
+          <div class="tag-label">Class lineup · <span id="live-lineup-class-name">Select class</span></div>
+          <div class="lineup-rail" id="live-lineup-rail">
+            <!-- Lineup chips will be populated here -->
+          </div>
+
+          <div class="input-row">
+            <div class="field">
+              <label>Select Truck (override order if needed)</label>
+              <select id="live-truck-selector" style="padding: 10px; background: rgba(15,23,42,0.7); border: 1px solid rgba(55,65,81,0.9); border-radius: 6px; color: #f9fafb; font-size: 0.9rem;">
+                <option value="">Choose truck to record</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Distance (inches)</label>
+              <input type="number" id="live-distance-input" step="0.01" placeholder="e.g. 304.2">
+            </div>
+            <div class="field">
+              <label>Speed (mph)</label>
+              <input type="number" id="live-speed-input" step="0.1" placeholder="e.g. 27.1">
+            </div>
+          </div>
+
+          <div class="tag-label">Hook flags</div>
+          <div class="flags-row">
+            <label class="flag-chip"><input type="checkbox" id="flag-dq"> DQ</label>
+            <label class="flag-chip"><input type="checkbox" id="flag-scratch"> Under 100 ft scratch</label>
+            <label class="flag-chip"><input type="checkbox" id="flag-sled-reset"> Sled reset</label>
+            <label class="flag-chip"><input type="checkbox" id="flag-exhibition"> Exhibition / test hook</label>
+          </div>
+
+          <button class="primary-btn" id="submit-hook-btn">Submit hook to leaderboard</button>
+        </div>
+
+        <div class="live-grid">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Pace & Timing</div>
+                <div class="card-subtitle">Flow between hooks and classes</div>
+              </div>
+            </div>
+            <div class="timer-row">
+              <div>Last hook recorded: <strong id="last-hook-time">--:--</strong></div>
+              <div class="timer-chip">Current leg: <strong id="current-leg-time">00:00</strong></div>
+            </div>
+            <p class="card-subtitle" style="margin-top:6px;">Average tonight: <strong id="avg-hook-time">--:--</strong> between hooks.</p>
+            <ul class="talk-list" id="timing-list">
+              <li>No hooks recorded yet</li>
+            </ul>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Live Leaderboard</div>
+                <div class="card-subtitle" id="leaderboard-subtitle">Select a class</div>
+              </div>
+            </div>
+            <div style="max-height: 400px; overflow-y: auto;">
+              <table id="live-leaderboard-table">
+                <thead>
+                  <tr><th>Place</th><th>Truck</th><th>Driver</th><th>Distance</th><th>Speed</th><th>Flags</th><th>Edit</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td colspan="7" style="text-align: center; padding: 20px; color: rgba(249,250,251,0.5);">Select a class to view leaderboard</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Class Stats & Talking Points</div>
+              <div class="card-subtitle">Quick notes for announcers / overlays</div>
+            </div>
+          </div>
+          <ul class="talk-list" id="stats-talking-points">
+            <li>Select a class to see stats</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- RESULTS -->
+      <section data-tab>
+        <div class="card" style="margin-bottom: 16px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Event Results</div>
+              <div class="card-subtitle">Final standings and statistics by class</div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="results-grid" class="lineup-grid">
+          <!-- Results will be populated here by class -->
+        </div>
+      </section>
+
+      <!-- EVENT SETUP -->
+      <section data-tab>
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Event Setup</div>
+              <div class="card-subtitle">Configure event details and manage tokens</div>
+            </div>
+          </div>
+          <div class="card-body" style="padding: 20px;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div>
+                  <div style="font-size: 14px; opacity: 0.9;">Available Event Tokens</div>
+                  <div style="font-size: 32px; font-weight: 700;" id="token-count">3</div>
+                </div>
+                <div style="text-align: right;">
+                  <button class="primary-btn" style="background: white; color: #667eea; border: none;" id="purchase-tokens-btn">
+                    💳 Purchase Tokens
+                  </button>
+                </div>
+              </div>
+              <div style="font-size: 13px; opacity: 0.85;">Each token allows you to create and record one event</div>
+            </div>
+
+            <form id="event-setup-form">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div class="field">
+                  <label for="event-name">Event Name *</label>
+                  <input type="text" id="event-name" placeholder="e.g. Battle in The Boro" required>
+                </div>
+                <div class="field">
+                  <label for="event-date">Event Date *</label>
+                  <input type="date" id="event-date" required style="cursor: pointer;">
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div class="field">
+                  <label for="event-location">Location *</label>
+                  <input type="text" id="event-location" placeholder="e.g. Statesboro, GA" required>
+                </div>
+                <div class="field">
+                  <label for="event-organization">Organization</label>
+                  <input type="text" id="event-organization" placeholder="e.g. Southern Pullers Association">
+                </div>
+              </div>
+
+              <div class="field" style="margin-bottom: 16px;">
+                <label for="event-notes">Event Notes</label>
+                <textarea id="event-notes" rows="3" placeholder="Any additional information about this event..." style="width: 100%; padding: 10px; border: 1px solid rgba(102,126,234,0.3); background: rgba(15,23,42,0.4); color: #f9fafb; border-radius: 4px; font-family: inherit; resize: vertical;"></textarea>
+              </div>
+
+              <div style="display: flex; gap: 12px; align-items: center; padding: 16px; background: rgba(15,23,42,0.4); border: 1px solid rgba(102,126,234,0.2); border-radius: 6px; margin-bottom: 16px;">
+                <div style="flex: 1;">
+                  <div style="font-weight: 600; margin-bottom: 4px; color: #f9fafb;">Create New Event</div>
+                  <div style="font-size: 13px; color: rgba(249,250,251,0.6);">This will consume 1 event token from your account</div>
+                </div>
+                <button type="submit" class="primary-btn" style="width: auto;" id="create-event-btn">
+                  🎫 Create Event (Use Token)
+                </button>
+              </div>
+            </form>
+
+            <div style="border-top: 1px solid #e0e0e0; padding-top: 20px; margin-top: 20px;">
+              <div style="font-weight: 600; margin-bottom: 12px; font-size: 15px;">Active Events</div>
+              <div id="active-events-list">
+                <div style="padding: 16px; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #667eea;">
+                  <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                      <div style="font-weight: 600; margin-bottom: 4px;">Battle in The Boro</div>
+                      <div style="font-size: 13px; color: #666;">November 11, 2025 · Statesboro, GA</div>
+                      <div style="font-size: 12px; color: #667eea; margin-top: 6px;">✓ Active Event</div>
+                    </div>
+                    <button class="modal-btn cancel" style="padding: 6px 12px; font-size: 13px;">Archive</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section data-tab>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Settings</div>
+              <div class="card-subtitle">Customize look & feel and preferences</div>
+            </div>
+          </div>
+          <div class="card-body" style="padding: 20px;">
+            <!-- Theme Selection -->
+            <div style="margin-bottom: 24px;">
+              <h3 style="margin: 0 0 8px; font-size: 15px; letter-spacing: .5px;">Theme Style</h3>
+              <p style="margin:0 0 12px; font-size: 12px; color: rgba(249,250,251,0.6);">Pick a base theme or define your own brand color.</p>
+              <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                <div class="theme-chip" data-theme="theme-purple">Purple</div>
+                <div class="theme-chip" data-theme="theme-blue">Blue</div>
+                <div class="theme-chip" data-theme="theme-neutral">Neutral</div>
+                <div style="display:flex; align-items:center; gap:6px; background: rgba(15,23,42,0.5); padding:6px 10px; border-radius:8px; border:1px solid rgba(102,126,234,0.25);">
+                  <label for="custom-primary-color" style="font-size:11px; color:rgba(249,250,251,0.7);">Custom</label>
+                  <input type="color" id="custom-primary-color" value="#4b0082" style="cursor:pointer; border:none; background:transparent; width:32px; height:24px;">
+                  <button type="button" id="apply-custom-color-btn" class="modal-btn save" style="padding:4px 10px; font-size:11px;">Apply</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mode Selection -->
+            <div style="margin-bottom: 24px;">
+              <h3 style="margin: 0 0 8px; font-size: 15px; letter-spacing: .5px;">Appearance Mode</h3>
+              <p style="margin:0 0 12px; font-size: 12px; color: rgba(249,250,251,0.6);">Switch between dark and light interface.</p>
+              <div style="display:flex; gap:10px;">
+                <button type="button" class="modal-btn save" id="enable-dark-mode" style="padding:6px 14px;">Dark</button>
+                <button type="button" class="modal-btn cancel" id="enable-light-mode" style="padding:6px 14px;">Light</button>
+              </div>
+            </div>
+
+            <!-- Density -->
+            <div style="margin-bottom: 24px;">
+              <h3 style="margin: 0 0 8px; font-size: 15px; letter-spacing: .5px;">Interface Density</h3>
+              <p style="margin:0 0 12px; font-size: 12px; color: rgba(249,250,251,0.6);">Control vertical spacing for tables and forms.</p>
+              <div style="display:flex; gap:10px;">
+                <button type="button" class="modal-btn save" id="density-comfortable" style="padding:6px 14px;">Comfortable</button>
+                <button type="button" class="modal-btn cancel" id="density-compact" style="padding:6px 14px;">Compact</button>
+              </div>
+            </div>
+
+            <!-- Button Glow -->
+            <div style="margin-bottom: 24px;">
+              <h3 style="margin: 0 0 8px; font-size: 15px; letter-spacing: .5px;">Button Glow Intensity</h3>
+              <p style="margin:0 8px 14px; font-size: 12px; color: rgba(249,250,251,0.6);">Adjust accent buttons' shadow strength. Scale 1–10.</p>
+              <div style="display:flex; align-items:center; gap:14px;">
+                <span style="font-size:11px; color:rgba(249,250,251,0.55);">1</span>
+                <input type="range" id="glow-intensity-slider" min="1" max="10" step="1" value="5" style="flex:1; accent-color: var(--primary-bright); cursor:pointer;">
+                <span style="font-size:11px; color:rgba(249,250,251,0.55);">10</span>
+              </div>
+              <div id="glow-intensity-value" style="margin-top:8px; font-size:11px; color:rgba(249,250,251,0.65); letter-spacing:.5px;">Current: 5/10</div>
+            </div>
+
+            <!-- Data Preferences Placeholder -->
+            <div style="margin-bottom: 8px;">
+              <h3 style="margin: 0 0 8px; font-size: 15px; letter-spacing: .5px;">Data Preferences (Coming Soon)</h3>
+              <p style="margin:0; font-size:12px; color:rgba(249,250,251,0.55);">Export format, autosave interval, server sync will appear here.</p>
+            </div>
+
+            <hr style="border:none; border-top:1px solid rgba(255,255,255,0.08); margin:24px 0;">
+            <div style="font-size:11px; color:rgba(249,250,251,0.45);">Settings are stored locally. <span style="color:rgba(249,250,251,0.65);">Server sync</span> coming soon. (TODO: persist via API)</div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Edit Member Modal -->
+  <div id="edit-modal-overlay" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Edit Member</h2>
+        <p>Update member information</p>
+      </div>
+      <form id="edit-member-form" class="modal-content">
+        <div class="field">
+          <label for="edit-membership">Membership #</label>
+          <input type="text" id="edit-membership" placeholder="e.g. 6207">
+        </div>
+        <div class="field">
+          <label for="edit-vehicle">Vehicle</label>
+          <input type="text" id="edit-vehicle" placeholder="Vehicle name">
+        </div>
+        <div class="field">
+          <label for="edit-makemodel">Make / Model</label>
+          <input type="text" id="edit-makemodel" placeholder="e.g. Chevy C10">
+        </div>
+        <div class="field">
+          <label for="edit-city">City</label>
+          <input type="text" id="edit-city" placeholder="City">
+        </div>
+        <div class="field">
+          <label for="edit-state">State</label>
+          <input type="text" id="edit-state" placeholder="State">
+        </div>
+        <div class="field">
+          <label for="edit-driver">Driver</label>
+          <input type="text" id="edit-driver" placeholder="Driver name">
+        </div>
+        <div class="field">
+          <label for="edit-additionaldriver">Additional Driver</label>
+          <input type="text" id="edit-additionaldriver" placeholder="Additional driver name">
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="edit-modal-save" class="modal-btn save">Save Changes</button>
+          <button type="button" id="edit-modal-cancel" class="modal-btn cancel">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div id="edit-member-modal"></div>
+
+  <!-- View Member Details Modal -->
+  <div id="view-details-modal-overlay" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Member Details</h2>
+        <p id="view-details-subtitle">View full information</p>
+      </div>
+      <form id="details-form" class="modal-content">
+        <div class="field">
+          <label for="details-membership">Membership #</label>
+          <input type="text" id="details-membership" class="detail-display">
+        </div>
+        <div class="field">
+          <label for="details-vehicle">Vehicle</label>
+          <input type="text" id="details-vehicle" class="detail-display">
+        </div>
+        <div class="field">
+          <label for="details-makemodel">Make / Model</label>
+          <input type="text" id="details-makemodel" class="detail-display">
+        </div>
+        <div class="field">
+          <label for="details-city">City</label>
+          <input type="text" id="details-city" class="detail-display">
+        </div>
+        <div class="field">
+          <label for="details-state">State</label>
+          <input type="text" id="details-state" class="detail-display">
+        </div>
+        <div class="field">
+          <label for="details-driver">Driver</label>
+          <input type="text" id="details-driver" class="detail-display">
+        </div>
+        <div class="field">
+          <label for="details-additionaldriver">Additional Driver</label>
+          <input type="text" id="details-additionaldriver" class="detail-display">
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="details-edit-btn" class="modal-btn save">Edit Member</button>
+          <button type="button" id="details-delete-btn" class="modal-btn delete">Delete</button>
+          <button type="button" id="details-close-btn" class="modal-btn cancel">Close</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Vehicle Modal -->
+  <div id="add-vehicle-modal-overlay" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Add Vehicle to Roster</h2>
+        <p>Enter the vehicle and driver information</p>
+      </div>
+      <form id="add-vehicle-form" class="modal-content">
+        <div class="field">
+          <label for="add-class">Class</label>
+          <input type="text" id="add-class" placeholder="e.g. 6200 2WD Local" required>
+        </div>
+        <div class="field">
+          <label for="add-membership">Membership #</label>
+          <input type="text" id="add-membership" placeholder="e.g. 6207" required>
+        </div>
+        <div class="field">
+          <label for="add-vehicle">Vehicle</label>
+          <input type="text" id="add-vehicle" placeholder="Vehicle name" required>
+        </div>
+        <div class="field">
+          <label for="add-makemodel">Make / Model</label>
+          <input type="text" id="add-makemodel" placeholder="e.g. Chevy C10" required>
+        </div>
+        <div class="field">
+          <label for="add-city">City</label>
+          <input type="text" id="add-city" placeholder="City">
+        </div>
+        <div class="field">
+          <label for="add-state">State</label>
+          <input type="text" id="add-state" placeholder="State">
+        </div>
+        <div class="field">
+          <label for="add-driver">Driver</label>
+          <input type="text" id="add-driver" placeholder="Driver name" required>
+        </div>
+        <div class="field">
+          <label for="add-additionaldriver">Additional Driver</label>
+          <input type="text" id="add-additionaldriver" placeholder="Additional driver name">
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="add-vehicle-modal-save" class="modal-btn save">Add to Roster</button>
+          <button type="button" id="add-vehicle-modal-cancel" class="modal-btn cancel">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Event Modal -->
+  <div id="edit-event-modal-overlay" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Edit Event</h2>
+        <p>Update event details</p>
+      </div>
+      <form id="edit-event-form" class="modal-content">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div class="field">
+            <label for="edit-event-name">Event Name *</label>
+            <input type="text" id="edit-event-name" required>
+          </div>
+          <div class="field">
+            <label for="edit-event-date">Event Date *</label>
+            <input type="date" id="edit-event-date" required style="cursor: pointer;">
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div class="field">
+            <label for="edit-event-location">Location *</label>
+            <input type="text" id="edit-event-location" required>
+          </div>
+          <div class="field">
+            <label for="edit-event-organization">Organization</label>
+            <input type="text" id="edit-event-organization">
+          </div>
+        </div>
+        <div class="field" style="margin-bottom: 16px;">
+          <label for="edit-event-notes">Event Notes</label>
+          <textarea id="edit-event-notes" rows="3" style="width: 100%; padding: 10px; border: 1px solid rgba(102,126,234,0.3); background: rgba(15,23,42,0.4); color: #f9fafb; border-radius: 4px; font-family: inherit; resize: vertical;"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="save-event-edit-btn" class="modal-btn save">Save Changes</button>
+          <button type="button" id="cancel-event-edit-btn" class="modal-btn cancel">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Cancel Event Modal -->
+  <div id="cancel-event-modal-overlay" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Cancel Event</h2>
+        <p>Provide a reason. A token will be refunded.</p>
+      </div>
+      <form id="cancel-event-form" class="modal-content">
+        <div style="margin-bottom: 8px; font-size: 13px; color: rgba(249,250,251,0.75);">
+          Event: <span id="cancel-event-summary" style="font-weight: 600; color: #f9fafb;"></span>
+        </div>
+        <div class="field">
+          <label for="cancel-event-reason">Reason</label>
+          <select id="cancel-event-reason" style="width: 100%; padding: 10px; border: 1px solid rgba(102,126,234,0.3); background: rgba(15,23,42,0.4); color: #f9fafb; border-radius: 4px;">
+            <option>Rain out</option>
+            <option>Track conditions</option>
+            <option>Low turnout</option>
+            <option>Safety issue</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="cancel-event-notes">Notes (optional)</label>
+          <textarea id="cancel-event-notes" rows="3" style="width: 100%; padding: 10px; border: 1px solid rgba(102,126,234,0.3); background: rgba(15,23,42,0.4); color: #f9fafb; border-radius: 4px; font-family: inherit; resize: vertical;"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="confirm-cancel-event-btn" class="modal-btn delete">Confirm Cancel + Refund</button>
+          <button type="button" id="cancel-cancel-event-btn" class="modal-btn cancel">Back</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Lineup Entry Modal -->
+  <div id="edit-lineup-modal-overlay" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Edit Lineup Entry</h2>
+        <p>Update draw number or remove from lineup</p>
+      </div>
+      <form id="edit-lineup-form" class="modal-content">
+        <div class="field">
+          <label for="edit-lineup-draw">Draw #</label>
+          <input type="number" id="edit-lineup-draw" min="1" max="100">
+        </div>
+        <div class="field">
+          <label for="edit-lineup-class">Class</label>
+          <input type="text" id="edit-lineup-class" readonly class="detail-display">
+        </div>
+        <div class="field">
+          <label for="edit-lineup-truck">Truck</label>
+          <input type="text" id="edit-lineup-truck" readonly class="detail-display">
+        </div>
+        <div class="field">
+          <label for="edit-lineup-driver">Driver</label>
+          <input type="text" id="edit-lineup-driver" readonly class="detail-display">
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="save-lineup-edit-btn" class="modal-btn save">Save Changes</button>
+          <button type="button" id="delete-lineup-entry-btn" class="modal-btn delete">Remove from Lineup</button>
+          <button type="button" id="cancel-lineup-edit-btn" class="modal-btn cancel">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add to Lineup Modal -->
+  <div id="add-lineup-modal-overlay" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Add to Event Lineup</h2>
+        <p>Search roster and assign draw number</p>
+      </div>
+      <form id="add-lineup-form" class="modal-content">
+        <div class="field">
+          <label for="lineup-roster-search">Search Vehicle / Driver (from roster)</label>
+          <input type="text" id="lineup-roster-search" placeholder="Start typing truck or driver name…" list="lineup-roster-options">
+          <datalist id="lineup-roster-options"></datalist>
+        </div>
+        <div class="field">
+          <label for="lineup-draw-number">Draw #</label>
+          <input type="number" id="lineup-draw-number" placeholder="e.g. 5" required min="1">
+        </div>
+        <div class="field">
+          <label for="lineup-class-display">Class</label>
+          <input type="text" id="lineup-class-display" placeholder="Auto-filled from roster" readonly class="detail-display">
+        </div>
+        <div class="field">
+          <label for="lineup-truck-display">Truck</label>
+          <input type="text" id="lineup-truck-display" placeholder="Auto-filled from roster" readonly class="detail-display">
+        </div>
+        <div class="field">
+          <label for="lineup-driver-display">Driver</label>
+          <input type="text" id="lineup-driver-display" placeholder="Auto-filled from roster" readonly class="detail-display">
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="add-to-lineup-btn" class="modal-btn save">Add to Lineup</button>
+          <button type="button" id="add-lineup-modal-cancel" class="modal-btn cancel">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Pull Modal -->
+  <div id="edit-pull-modal-overlay" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">Edit Pull Results</div>
+      <form id="edit-pull-form" class="modal-form">
+        <div class="field">
+          <label>Truck</label>
+          <input type="text" id="edit-pull-truck" readonly class="detail-display">
+        </div>
+        <div class="field">
+          <label>Driver</label>
+          <input type="text" id="edit-pull-driver" readonly class="detail-display">
+        </div>
+        <div class="field">
+          <label for="edit-pull-distance">Distance (inches)</label>
+          <input type="number" id="edit-pull-distance" step="0.01" placeholder="e.g. 304.2" required>
+        </div>
+        <div class="field">
+          <label for="edit-pull-speed">Speed (mph)</label>
+          <input type="number" id="edit-pull-speed" step="0.1" placeholder="e.g. 27.1">
+        </div>
+        <div class="field">
+          <label style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="edit-pull-dq">
+            <span>Mark as DQ (disqualified)</span>
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="save-pull-edit-btn" class="modal-btn save">Save Changes</button>
+          <button type="button" id="cancel-pull-edit-btn" class="modal-btn cancel">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</body>
+</html>

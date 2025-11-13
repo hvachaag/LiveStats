@@ -1,0 +1,50 @@
+ <!-- LINEUP -->
+      <section data-tab>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Add truck to lineup</div>
+              <div class="card-subtitle">Search roster, assign Draw #, and add to tonight's event</div>
+            </div>
+          </div>
+          <div class="input-row">
+            <div class="field">
+              <label>Search vehicle / driver (from roster)</label>
+              <input type="text" id="lineup-roster-search" placeholder="Start typing truck or driver name…" list="lineup-roster-options">
+              <datalist id="lineup-roster-options"></datalist>
+            </div>
+            <div class="field">
+              <label>Draw #</label>
+              <input type="number" id="lineup-draw-number" placeholder="e.g. 5">
+            </div>
+            <div class="field">
+              <label>Class</label>
+              <input type="text" id="lineup-class-display" placeholder="Auto-filled from roster" readonly>
+            </div>
+          </div>
+          <div class="input-row">
+            <div class="field">
+              <label>Truck</label>
+              <input type="text" id="lineup-truck-display" placeholder="Auto-filled from roster" readonly>
+            </div>
+            <div class="field">
+              <label>Driver</label>
+              <input type="text" id="lineup-driver-display" placeholder="Auto-filled from roster" readonly>
+            </div>
+            <div class="field">
+              <label>&nbsp;</label>
+              <button class="primary-btn" type="button" id="add-to-lineup-btn">Add to lineup</button>
+            </div>
+          </div>
+        </div>
+        <div id="lineup-grid" class="lineup-grid">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Event lineup</div>
+                <div class="card-subtitle">No entries added yet. Use the form above to build tonight's draws.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>

@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en" data-theme="purple">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LiveStats Engine — Console</title>
+  <style>
+    :root{
+      --ink:#0f172a; --muted:#9ca3af; --line:#1f2937; --bg:#0b0f1a; --panel:#0f1422; --panel-2:#12182a;
+      --brand:#6d28d9; --brand-2:#a855f7; --shadow: rgba(75,0,130,.35);
+    }
+    [data-theme="blue"]{ --brand:#2563eb; --brand-2:#60a5fa; --shadow: rgba(37,99,235,.35); }
+    [data-theme="neutral"]{ --brand:#475569; --brand-2:#94a3b8; --shadow: rgba(71,85,105,.35); }
+
+    *{ box-sizing:border-box }
+    html,body{ height:100% }
+    body{ margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:#e5e7eb; background:
+      radial-gradient(1200px 500px at 0% 0%, rgba(168,85,247,.12), transparent 60%),
+      radial-gradient(800px 400px at 100% 0%, rgba(109,40,217,.10), transparent 55%),
+      linear-gradient(180deg, #0b0f1a, #0b0f1a 60%);
+    }
+    .app{ max-width:1200px; margin:0 auto; padding:14px 14px 28px; min-height:100vh; display:flex; flex-direction:column; }
+
+    header.app-head{ background: linear-gradient(135deg,var(--brand),var(--brand-2)); border-radius:18px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; box-shadow: 0 18px 45px var(--shadow); }
+    .brand{ display:flex; align-items:center; gap:10px; }
+    .brand img{ height:28px; width:auto; display:block }
+    .brand h1{ margin:0; font-size:1rem; letter-spacing:.02em }
+    .brand p{ margin:2px 0 0; font-size:.8rem; opacity:.9 }
+    .meta{ text-align:right; font-size:.8rem }
+    .badge{ display:inline-flex; gap:8px; align-items:center; padding:3px 10px; border-radius:999px; border:1px solid rgba(248,250,252,.25); background: rgba(2,6,23,.25); font-size:.72rem }
+    .meta .muted{ opacity:.85; font-size:.72rem; margin:2px 0 }
+
+    nav.tabs{ margin-top:14px; display:flex; gap:6px; align-items:center; flex-wrap:wrap }
+    .tab-btn{ border:none; background: rgba(2,6,23,.6); color:#e5e7eb; padding:8px 12px; border-radius:12px; cursor:pointer; font-weight:600; letter-spacing:.02em; border:1px solid #1f2937 }
+    .tab-btn[aria-selected="true"]{ background: rgba(99,102,241,.14); border-color: rgba(168,85,247,.55); box-shadow: 0 10px 26px var(--shadow) }
+
+    main{ position:relative; margin-top:16px; flex:1; }
+    #view{ min-height: 60vh }
+
+    .card{ background: linear-gradient(180deg,var(--panel),var(--panel-2)); border:1px solid var(--line); border-radius:16px; padding:14px; box-shadow: 0 18px 40px rgba(0,0,0,.4); }
+    .card + .card{ margin-top:12px }
+    .card-header{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px }
+    .card-title{ font-size:.92rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#cbd5e1 }
+    .card-subtitle{ font-size:.8rem; color:#94a3b8 }
+
+    .progress{ height:3px; border-radius:999px; overflow:hidden; background:#111827; margin:10px 0 }
+    .progress > i{ display:block; width:45%; height:100%; background:linear-gradient(90deg,var(--brand),var(--brand-2)); animation: load 1.1s linear infinite }
+    @keyframes load{ from{ transform:translateX(-100%) } to{ transform:translateX(220%) } }
+
+    .empty{ display:grid; place-items:center; padding:40px 10px; border:1px dashed rgba(148,163,184,.35); border-radius:14px; color:#94a3b8; }
+    .empty a{ color:#c4b5fd }
+
+    footer{ margin-top:16px; color:#94a3b8; font-size:.78rem }
+    footer a{ color:#c4b5fd }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="app-head">
+      <div class="brand">
+        <img src="assets/spa-logo.png" alt="SPA" onerror="this.src='https://thesouthernpullers.com/wp-content/uploads/2025/04/logo.png'">
+        <div>
+          <h1>LiveStats Engine</h1>
+          <p>Georgia Motorsports Media — Console</p>
+        </div>
+      </div>
+      <div class="meta">
+        <div class="muted">Last sync: <span id="sync-age">—</span></div>
+        <div class="badge">Offline capture ready • Sync when online</div>
+        <div class="muted" style="margin-top:4px">Event: <strong id="event-name">Battle in the Boro' — Statesboro, GA</strong></div>
+      </div>
+    </header>
+
+    <nav class="tabs" role="tablist" aria-label="LiveStats sections">
+      <button class="tab-btn" data-tab="roster"  data-src="tabs/roster.html"  role="tab" aria-selected="true">Roster</button>
+      <button class="tab-btn" data-tab="lineup"  data-src="tabs/lineup.html"  role="tab" aria-selected="false">Lineup</button>
+      <button class="tab-btn" data-tab="live"    data-src="tabs/live.html"    role="tab" aria-selected="false">Live Event</button>
+      <button class="tab-btn" data-tab="results" data-src="tabs/results.html" role="tab" aria-selected="false">Results</button>
+      <button class="tab-btn" data-tab="settings" data-src="tabs/settings.html" role="tab" aria-selected="false">Settings</button>
+      <span style="flex:1"></span>
+      <button class="tab-btn" id="theme-toggle" title="Cycle theme">Theme</button>
+    </nav>
+
+    <main>
+      <div class="progress" id="progress" hidden><i></i></div>
+      <div id="view" class="view"></div>
+      <div id="fallback" class="empty" hidden>
+        <div>
+          <p>No content loaded. Create the tab files in <code>/tabs/</code> to get started.</p>
+          <p>Expected files: <code>roster.html</code>, <code>lineup.html</code>, <code>live.html</code>, <code>results.html</code>, <code>settings.html</code>.</p>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <span>© <span id="year"></span> Georgia Motorsports Media • LiveStats Engine</span>
+    </footer>
+  </div>
+
+  <script>
+    (function(){
+      const cache = new Map();
+      const view  = document.getElementById('view');
+      const prog  = document.getElementById('progress');
+      const fallback = document.getElementById('fallback');
+      const tabs = document.querySelectorAll('.tab-btn[data-tab]');
+      const themeToggle = document.getElementById('theme-toggle');
+      const root = document.documentElement;
+
+      // Theme persistence
+      const THEMES = ['purple','blue','neutral'];
+      function setTheme(name){ root.setAttribute('data-theme', name); localStorage.setItem('lvs:theme', name); }
+      function cycleTheme(){ const cur = root.getAttribute('data-theme')||'purple'; const i=(THEMES.indexOf(cur)+1)%THEMES.length; setTheme(THEMES[i]); }
+      setTheme(localStorage.getItem('lvs:theme') || 'purple');
+      themeToggle.addEventListener('click', cycleTheme);
+
+      function showProgress(yes){ prog.hidden = !yes }
+
+      // Execute <script> tags inside loaded fragments
+      function executeFragmentScripts(container){
+        const scripts = Array.from(container.querySelectorAll('script'));
+        for(const old of scripts){
+          const s = document.createElement('script');
+          if(old.type) s.type = old.type;
+          if(old.src){ s.src = old.src; s.async = false; }
+          else { s.textContent = old.textContent; }
+          old.replaceWith(s);
+        }
+      }
+
+      // Let fragments expose well-known init hooks
+      function callFragmentInit(id){
+        const prefer = {
+          roster:  ['lvsInitRoster','lvsInit'],
+          lineup:  ['lvsInitLineup','lvsInit'],
+          live:    ['lvsInitLive','lvsInit'],
+          results: ['lvsInitResults','lvsInit'],
+          settings:['lvsInitSettings','lvsInit']
+        }[id] || [];
+        for(const fn of prefer){ if(typeof window[fn] === 'function'){ try{ window[fn](); }catch(e){ console.warn('init hook failed', id, fn, e); } } }
+      }
+
+      async function loadTab(tab){
+        const src = tab.dataset.src;
+        const id  = tab.dataset.tab;
+        tabs.forEach(b=>b.setAttribute('aria-selected', b===tab ? 'true' : 'false'));
+        showProgress(true);
+        try{
+          let html;
+          if(cache.has(id)){
+            html = cache.get(id);
+          }else if(src){
+            const res = await fetch(src, {cache:'no-store'});
+            if(!res.ok) throw new Error('HTTP '+res.status);
+            html = await res.text();
+            cache.set(id, html);
+          }else{
+            html = `<section class="tab-view"><div class="card"><div class="card-header"><div><div class="card-title">${id}</div><div class="card-subtitle">No source set for this tab.</div></div></div></div></section>`;
+          }
+          view.innerHTML = html;
+          executeFragmentScripts(view);
+          callFragmentInit(id);
+          fallback.hidden = true;
+          history.replaceState(null, '', '#'+id);
+          sessionStorage.setItem('lvs:tab', id);
+        }catch(err){
+          console.warn('Load failed for', id, err);
+          view.innerHTML = '';
+          fallback.hidden = false;
+        }finally{
+          showProgress(false);
+        }
+      }
+
+      tabs.forEach(btn=> btn.addEventListener('click', ()=> loadTab(btn)) );
+
+      function initialTab(){
+        const hash = (location.hash||'').replace('#','');
+        const saved = sessionStorage.getItem('lvs:tab');
+        const want = hash || saved || 'roster';
+        const btn = Array.from(tabs).find(b=>b.dataset.tab===want) || tabs[0];
+        loadTab(btn);
+      }
+
+      const syncAge = document.getElementById('sync-age');
+      let t0 = Date.now();
+      setInterval(()=>{
+        const s = Math.floor((Date.now()-t0)/1000);
+        const m = Math.floor(s/60), r = s%60;
+        syncAge.textContent = (m>0? (m+'m '):'') + r + 's ago';
+      }, 1000);
+
+      document.getElementById('year').textContent = new Date().getFullYear();
+      initialTab();
+    })();
+  </script>
+</body>
+</html>
