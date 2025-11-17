@@ -1,0 +1,39 @@
+{
+  "name": "livestats-electron",
+  "version": "0.1.0",
+  "description": "LiveStats consumer app - Electron wrapper for local HTML/CSS/JS mock experience",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "dist": "electron-builder --win --x64 --publish never"
+  },
+  "keywords": [
+    "livestats",
+    "electron",
+    "mock"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^26.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.example.livestats",
+    "productName": "LiveStats",
+    "copyright": "Copyright (c) 2025",
+    "files": [
+      "**/*"
+    ],
+    "asar": false,
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "portable"
+      ]
+    }
+  }
+}
